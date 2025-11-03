@@ -223,7 +223,7 @@ export const findAndRankScholarships = async (profile: UserProfile, language: st
         const jsonMatch = text.match(/\[[\s\S]*\]/);
         if (!jsonMatch) {
             console.error("No valid JSON array found in the scholarship response:", text);
-            return [];
+            throw new Error("The AI returned an unexpected format for scholarships. Please try rescanning.");
         }
 
         const jsonStr = jsonMatch[0];
@@ -232,7 +232,7 @@ export const findAndRankScholarships = async (profile: UserProfile, language: st
 
     } catch (error) {
         console.error("Error finding scholarships:", error);
-        return [];
+        throw new Error("Could not find scholarships. The AI service may be temporarily unavailable.");
     }
 };
 
@@ -248,7 +248,7 @@ export const generateProfileSummary = async (profile: UserProfile, language: str
         return response.text;
     } catch (error) {
         console.error("Error generating summary:", error);
-        return "Could not generate profile summary.";
+        throw new Error("Could not generate profile summary.");
     }
 };
 
@@ -270,7 +270,7 @@ export const generateSmartActionPlan = async (scholarships: Scholarship[], profi
         return actionPlan;
     } catch (error) {
         console.error("Error generating action plan:", error);
-        return [];
+        throw new Error("Could not generate a smart action plan.");
     }
 };
 

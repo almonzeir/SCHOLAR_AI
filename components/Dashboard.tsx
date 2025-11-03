@@ -4,14 +4,15 @@ import ProfileView from './dashboard/ProfileView';
 import OpportunitiesView from './dashboard/OpportunitiesView';
 import ActionPlanView from './dashboard/ActionPlanView';
 import ChatCompanion from './dashboard/ChatCompanion';
-import { SparklesIcon, UserIcon, TargetIcon, CalendarIcon } from './icons';
+import { UserIcon, TargetIcon, CalendarIcon } from './icons';
 import { translations } from '../translations';
 import { UserProfile } from '../types';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { Logo } from './Logo';
 
 
 const Dashboard: React.FC<{initialProfile: UserProfile}> = ({ initialProfile }) => {
-    const { userProfile, initializeDataForProfile, language, profileUpdated } = useAppContext();
+    const { userProfile, initializeDataForProfile, language, profileUpdated, error, clearError } = useAppContext();
     const [activeTab, setActiveTab] = useState<Tab>('opportunities');
     const t = translations[language];
 
@@ -23,6 +24,7 @@ const Dashboard: React.FC<{initialProfile: UserProfile}> = ({ initialProfile }) 
 
     const handleRescan = () => {
         if(userProfile){
+            clearError();
             initializeDataForProfile(userProfile, true);
         }
     };
@@ -54,8 +56,11 @@ const Dashboard: React.FC<{initialProfile: UserProfile}> = ({ initialProfile }) 
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         <div className="flex items-center gap-2">
-                            <SparklesIcon className="w-8 h-8 text-orange-500" />
-                            <h1 className="text-2xl font-bold text-white">ScholarAI</h1>
+                            <Logo className="w-12 h-12" />
+                            <h1 className="text-2xl font-bold tracking-tight">
+                                <span className="text-white">Scholar</span>
+                                <span className="text-orange-500">AI</span>
+                            </h1>
                         </div>
                          <div className="flex items-center gap-4">
                             <div className={language === 'ar' ? 'text-left' : 'text-right'}>
@@ -69,11 +74,22 @@ const Dashboard: React.FC<{initialProfile: UserProfile}> = ({ initialProfile }) 
             </header>
             
             <main className="flex-grow container mx-auto p-4 sm:p-6 lg:p-8">
-                 {profileUpdated && (
+                 {profileUpdated && !error && (
                     <div className="bg-orange-600/20 border border-orange-500 text-orange-300 px-4 py-3 rounded-lg relative mb-6 flex items-center justify-between">
                         <span className="font-semibold">{t.profile_updated}</span>
                         <button onClick={handleRescan} className="bg-orange-600 text-white px-4 py-1 rounded-md text-sm font-bold hover:bg-orange-700">
                             {t.rescan_button}
+                        </button>
+                    </div>
+                )}
+                {error && (
+                     <div className="bg-red-600/20 border border-red-500 text-red-300 px-4 py-3 rounded-lg relative mb-6 flex items-center justify-between">
+                        <div>
+                            <p className="font-bold">An Error Occurred</p>
+                            <p className="text-sm">{error}</p>
+                        </div>
+                        <button onClick={handleRescan} className="bg-red-600 text-white px-4 py-1 rounded-md text-sm font-bold hover:bg-red-700">
+                            Retry
                         </button>
                     </div>
                 )}

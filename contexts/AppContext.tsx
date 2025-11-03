@@ -4,11 +4,14 @@ import * as geminiService from '../services/geminiService';
 
 type Language = 'ar' | 'en';
 
+const APP_STORAGE_KEY = 'scholarai_user_profile';
+
 interface AppContextType {
   userProfile: UserProfile | null;
   scholarships: Scholarship[];
   actionPlan: ActionItem[];
   loading: boolean;
+  error: string | null;
   language: Language;
   profileUpdated: boolean;
   setLanguage: (lang: Language) => void;
@@ -17,6 +20,7 @@ interface AppContextType {
   getScholarshipById: (id: string) => Scholarship | undefined;
   updateScholarshipFeedback: (scholarshipId: string, feedback: 'good' | 'bad') => void;
   updateUserProfile: (newProfile: UserProfile) => void;
+  clearError: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -26,6 +30,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
   const [actionPlan, setActionPlan] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [language, setLanguageState] = useState<Language>('ar');
   const [profileUpdated, setProfileUpdated] = useState(false);
 
@@ -40,28 +45,38 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
   }, [language]);
   
+  useEffect(() => {
+    if (userProfile) {
+      localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(userProfile));
+    }
+  }, [userProfile]);
 
   const initializeDataForProfile = useCallback(async (profile: UserProfile, isRescan = false) => {
     setLoading(true);
+    setError(null);
     if (!isRescan) {
       setUserProfile(profile);
     }
     
     setProfileUpdated(false);
 
-    // FIX: Refactored to avoid redundant API calls. Fetch scholarships first, then fetch summary and plan in parallel.
-    const foundScholarships = await geminiService.findAndRankScholarships(profile, language);
-    
-    const [summary, generatedPlan] = await Promise.all([
-        geminiService.generateProfileSummary(profile, language),
-        geminiService.generateSmartActionPlan(foundScholarships, profile, language)
-    ]);
-    
-    setUserProfile(prev => prev ? {...prev, summary} : profile);
-    setScholarships(foundScholarships);
-    setActionPlan(generatedPlan);
-    
-    setLoading(false);
+    try {
+      const foundScholarships = await geminiService.findAndRankScholarships(profile, language);
+      
+      const [summary, generatedPlan] = await Promise.all([
+          geminiService.generateProfileSummary(profile, language),
+          geminiService.generateSmartActionPlan(foundScholarships, profile, language)
+      ]);
+      
+      setUserProfile(prev => prev ? {...prev, summary} : profile);
+      setScholarships(foundScholarships);
+      setActionPlan(generatedPlan);
+    } catch (e: any) {
+        setError(e.message || "An unexpected error occurred. Please try again.");
+        console.error("Failed to initialize data:", e);
+    } finally {
+        setLoading(false);
+    }
   }, [language]);
 
   const updateScholarshipFeedback = (scholarshipId: string, feedback: 'good' | 'bad') => {
@@ -81,8 +96,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return scholarships.find(s => s.id === id);
   }, [scholarships]);
 
+  const clearError = () => setError(null);
+
   return (
-    <AppContext.Provider value={{ userProfile, scholarships, actionPlan, loading, language, profileUpdated, setLanguage, initializeDataForProfile, updateActionItem, getScholarshipById, updateScholarshipFeedback, updateUserProfile }}>
+    <AppContext.Provider value={{ userProfile, scholarships, actionPlan, loading, error, language, profileUpdated, setLanguage, initializeDataForProfile, updateActionItem, getScholarshipById, updateScholarshipFeedback, updateUserProfile, clearError }}>
       {children}
     </AppContext.Provider>
   );

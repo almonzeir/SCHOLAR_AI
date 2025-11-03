@@ -1,10 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { UserProfile } from '../types';
 import { SparklesIcon, DocumentTextIcon, EditIcon, UploadIcon } from './icons';
 import * as geminiService from '../services/geminiService';
 import { useAppContext } from '../contexts/AppContext';
 import { translations } from '../translations';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { Logo } from './Logo';
 
 
 interface OnboardingProps {
@@ -35,6 +36,19 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const [fileName, setFileName] = useState('');
     const [dragActive, setDragActive] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    const isStepValid = useMemo(() => {
+        switch (step) {
+            case 1:
+                return profile.name.trim() !== '';
+            case 2:
+                return profile.education.every(edu => edu.institution.trim() !== '' && edu.degree.trim() !== '' && edu.fieldOfStudy.trim() !== '');
+            case 3:
+                return profile.goals.trim() !== '' && profile.skills.length > 0 && profile.studyInterests.length > 0 && profile.financialSituation !== '';
+            default:
+                return false;
+        }
+    }, [step, profile]);
 
     const handleDrag = (e: React.DragEvent) => {
         e.preventDefault();
@@ -146,6 +160,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const prevStep = () => setStep(s => s - 1);
 
     const handleSubmit = () => {
+        if (!isStepValid) return;
         onComplete(profile);
     };
     
@@ -164,6 +179,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                 onChange={handleChange}
                                 placeholder="e.g., Alex Doe"
                                 className="w-full p-3 bg-gray-700 text-white rounded-lg border-transparent focus:ring-2 focus:ring-orange-500"
+                                required
                             />
                         </div>
                     );
@@ -173,9 +189,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                             <h2 className="text-2xl font-bold mb-6 text-white">{t.education}</h2>
                             {profile.education.map((edu, index) => (
                                  <div key={index} className="space-y-3 p-4 mb-4 border border-gray-700 rounded-lg">
-                                    <input name="institution" value={edu.institution} onChange={(e) => handleEducationChange(index, e)} placeholder="Institution" className="w-full p-2 bg-gray-700 rounded"/>
-                                    <input name="degree" value={edu.degree} onChange={(e) => handleEducationChange(index, e)} placeholder="Degree" className="w-full p-2 bg-gray-700 rounded"/>
-                                    <input name="fieldOfStudy" value={edu.fieldOfStudy} onChange={(e) => handleEducationChange(index, e)} placeholder="Field of Study" className="w-full p-2 bg-gray-700 rounded"/>
+                                    <input name="institution" value={edu.institution} onChange={(e) => handleEducationChange(index, e)} placeholder="Institution *" className="w-full p-2 bg-gray-700 rounded" required/>
+                                    <input name="degree" value={edu.degree} onChange={(e) => handleEducationChange(index, e)} placeholder="Degree *" className="w-full p-2 bg-gray-700 rounded" required/>
+                                    <input name="fieldOfStudy" value={edu.fieldOfStudy} onChange={(e) => handleEducationChange(index, e)} placeholder="Field of Study *" className="w-full p-2 bg-gray-700 rounded" required/>
                                     <input name="gpa" type="number" step="0.1" value={edu.gpa} onChange={(e) => handleEducationChange(index, e)} placeholder="GPA" className="w-full p-2 bg-gray-700 rounded"/>
                                 </div>
                             ))}
@@ -187,12 +203,12 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                         <div>
                             <h2 className="text-2xl font-bold mb-6 text-white">{t.skills} & Interests</h2>
                             <div className="space-y-4">
-                                <textarea name="goals" value={profile.goals} onChange={handleChange} placeholder="What are your academic and career goals?" className="w-full p-2 bg-gray-700 rounded h-24"/>
-                                <input type="text" defaultValue={profile.skills.join(', ')} onChange={(e) => handleListChange('skills', e.target.value)} placeholder="Skills (comma-separated, e.g., Python, Research)" className="w-full p-2 bg-gray-700 rounded"/>
-                                <input type="text" defaultValue={profile.studyInterests.join(', ')} onChange={(e) => handleListChange('studyInterests', e.target.value)} placeholder="Fields of interest (e.g., AI, Marine Biology)" className="w-full p-2 bg-gray-700 rounded"/>
+                                <textarea name="goals" value={profile.goals} onChange={handleChange} placeholder="What are your academic and career goals? *" className="w-full p-2 bg-gray-700 rounded h-24" required/>
+                                <input type="text" defaultValue={profile.skills.join(', ')} onChange={(e) => handleListChange('skills', e.target.value)} placeholder="Skills (comma-separated, e.g., Python, Research) *" className="w-full p-2 bg-gray-700 rounded" required/>
+                                <input type="text" defaultValue={profile.studyInterests.join(', ')} onChange={(e) => handleListChange('studyInterests', e.target.value)} placeholder="Fields of interest (e.g., AI, Marine Biology) *" className="w-full p-2 bg-gray-700 rounded" required/>
                                 <input type="text" defaultValue={profile.languages.join(', ')} onChange={(e) => handleListChange('languages', e.target.value)} placeholder="Languages spoken (e.g., English, Spanish)" className="w-full p-2 bg-gray-700 rounded"/>
-                                <select name="financialSituation" value={profile.financialSituation} onChange={handleChange} className="w-full p-2 bg-gray-700 rounded">
-                                    <option value="">Select your financial situation</option>
+                                <select name="financialSituation" value={profile.financialSituation} onChange={handleChange} className="w-full p-2 bg-gray-700 rounded" required>
+                                    <option value="">Select your financial situation *</option>
                                     <option value="Significant Need">Significant Need</option>
                                     <option value="Moderate Need">Moderate Need</option>
                                     <option value="Some Need">Some Need</option>
@@ -224,9 +240,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                         ) : <div />}
                         
                         {step < 3 ? (
-                            <button onClick={nextStep} className="px-6 py-2 bg-orange-600 rounded-lg hover:bg-orange-700 transition font-bold">Next</button>
+                            <button onClick={nextStep} disabled={!isStepValid} className="px-6 py-2 bg-orange-600 rounded-lg hover:bg-orange-700 transition font-bold disabled:bg-gray-500 disabled:cursor-not-allowed">Next</button>
                         ) : (
-                            <button onClick={handleSubmit} className="px-6 py-2 bg-orange-600 rounded-lg hover:bg-orange-700 transition font-bold">Find Scholarships</button>
+                            <button onClick={handleSubmit} disabled={!isStepValid} className="px-6 py-2 bg-orange-600 rounded-lg hover:bg-orange-700 transition font-bold disabled:bg-gray-500 disabled:cursor-not-allowed">Find Scholarships</button>
                         )}
                     </div>
                 </div>
@@ -319,10 +335,13 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     return (
         <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center p-4 relative">
             <LanguageSwitcher />
-             <div className="flex items-center gap-2 justify-center mb-8">
-                <SparklesIcon className="w-10 h-10 text-orange-500" />
-                <h1 className="text-4xl font-bold">ScholarAI</h1>
-            </div>
+             <header className="flex items-center gap-3 justify-center mb-8">
+                <Logo className="w-16 h-16" />
+                <h1 className="text-4xl font-bold tracking-tight">
+                    <span className="text-white">Scholar</span>
+                    <span className="text-orange-500">AI</span>
+                </h1>
+            </header>
             
             {view === 'welcome' && renderWelcome()}
             {view === 'parse_resume' && renderParseResume()}

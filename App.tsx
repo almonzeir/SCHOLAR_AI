@@ -4,11 +4,25 @@ import Dashboard from './components/Dashboard';
 import { UserProfile } from './types';
 import { AppProvider } from './contexts/AppContext';
 
+const APP_STORAGE_KEY = 'scholarai_user_profile';
+
 function App() {
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [view, setView] = useState<'onboarding' | 'dashboard'>('onboarding');
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
+    try {
+      const savedProfile = localStorage.getItem(APP_STORAGE_KEY);
+      return savedProfile ? JSON.parse(savedProfile) : null;
+    } catch (error) {
+      console.error("Failed to parse user profile from localStorage", error);
+      return null;
+    }
+  });
+
+  const [view, setView] = useState<'onboarding' | 'dashboard'>(
+    userProfile ? 'dashboard' : 'onboarding'
+  );
 
   const handleOnboardingComplete = useCallback((profile: UserProfile) => {
+    localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(profile));
     setUserProfile(profile);
     setView('dashboard');
   }, []);
