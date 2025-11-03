@@ -1,0 +1,7 @@
+{
+  "name": "ScholarAI",
+  "description": "An AI-powered platform that provides personalized scholarship matching, application guidance, and action planning to empower students on their academic journey.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
