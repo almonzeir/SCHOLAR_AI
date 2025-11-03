@@ -41,6 +41,59 @@ const actionPlanSchema = {
     },
 };
 
+const userProfileSchema = {
+    type: Type.OBJECT,
+    properties: {
+        name: { type: Type.STRING, description: "The user's full name." },
+        education: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    institution: { type: Type.STRING },
+                    degree: { type: Type.STRING },
+                    fieldOfStudy: { type: Type.STRING },
+                    gpa: { type: Type.NUMBER },
+                },
+                required: ['institution', 'degree', 'fieldOfStudy']
+            }
+        },
+        experience: {
+            type: Type.ARRAY,
+            items: {
+                type: Type.OBJECT,
+                properties: {
+                    company: { type: Type.STRING },
+                    role: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                },
+                required: ['company', 'role']
+            }
+        },
+        skills: { type: Type.ARRAY, items: { type: Type.STRING } },
+        languages: { type: Type.ARRAY, items: { type: Type.STRING } },
+        goals: { type: Type.STRING, description: "A summary of the user's academic and career goals." },
+        financialSituation: { type: Type.STRING, description: "Must be one of: 'Significant Need', 'Moderate Need', 'Some Need', 'No Need'." },
+        studyInterests: { type: Type.ARRAY, items: { type: Type.STRING } },
+    },
+    required: ['name', 'education', 'goals', 'skills']
+};
+
+
+const generatePromptForResumeParsing = (resumeText: string, language: string): string => {
+    return `Analyze the following resume/CV text and extract the user's profile information. Respond in ${language} if possible for fields like 'goals'.
+    For the 'financialSituation' field, make a reasonable guess based on the resume content or default to 'Some Need' if no information is available.
+    Ensure the output strictly follows the provided JSON schema. If a piece of information (like GPA) is not present, omit the field but do not fail.
+
+    Resume Text:
+    ---
+    ${resumeText}
+    ---
+    
+    Return the user's profile as a single JSON object.`;
+};
+
+
 const generatePromptForScholarships = (profile: UserProfile, language: string): string => {
     return `Based on this user profile, find and rank 5-10 relevant scholarships. Respond in ${language}.
     Profile:
@@ -81,6 +134,29 @@ const generatePromptForActionPlan = (scholarships: Scholarship[], profile: UserP
     Return the plan as a JSON array.`;
 };
 
+export const parseResumeToProfile = async (resumeText: string, language: string): Promise<Partial<UserProfile>> => {
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const prompt = generatePromptForResumeParsing(resumeText, language);
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: userProfileSchema,
+            }
+        });
+
+        const jsonStr = response.text.trim();
+        const parsedProfile: Partial<UserProfile> = JSON.parse(jsonStr);
+        return parsedProfile;
+
+    } catch (error) {
+        console.error("Error parsing resume:", error);
+        throw new Error("Failed to parse resume with AI. Please try again or fill the form manually.");
+    }
+};
 
 export const findAndRankScholarships = async (profile: UserProfile, language: string): Promise<Scholarship[]> => {
     try {

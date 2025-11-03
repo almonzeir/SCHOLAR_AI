@@ -7,17 +7,8 @@ import ChatCompanion from './dashboard/ChatCompanion';
 import { SparklesIcon, UserIcon, TargetIcon, CalendarIcon } from './icons';
 import { translations } from '../translations';
 import { UserProfile } from '../types';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
-type Tab = 'profile' | 'opportunities' | 'plan';
-
-const LanguageSwitcher = () => {
-    const { language, setLanguage } = useAppContext();
-    return (
-        <button onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')} className="px-3 py-1 text-sm font-semibold rounded-full bg-gray-700 text-white hover:bg-gray-600 transition-colors">
-            {language === 'ar' ? 'English' : 'العربية'}
-        </button>
-    );
-};
 
 const Dashboard: React.FC<{initialProfile: UserProfile}> = ({ initialProfile }) => {
     const { userProfile, initializeDataForProfile, language, profileUpdated } = useAppContext();
@@ -35,6 +26,8 @@ const Dashboard: React.FC<{initialProfile: UserProfile}> = ({ initialProfile }) 
             initializeDataForProfile(userProfile, true);
         }
     };
+
+    type Tab = 'profile' | 'opportunities' | 'plan';
 
     const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
         { id: 'opportunities', label: t.tab_opportunities, icon: <TargetIcon className="w-5 h-5" /> },
