@@ -26,6 +26,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     });
 
     const [resumeText, setResumeText] = useState('');
+    const [resumeFile, setResumeFile] = useState<File | null>(null);
     const [isParsing, setIsParsing] = useState(false);
     const [parseError, setParseError] = useState('');
     const { language } = useAppContext();
@@ -62,29 +63,44 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     };
 
     const handleFile = (file: File) => {
-        if (file.type === 'text/plain') {
+        if (file.type === 'text/plain' || file.type === 'application/pdf') {
             setFileName(file.name);
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const text = e.target?.result;
-                setResumeText(text as string);
-            };
-            reader.readAsText(file);
+            setResumeFile(file);
+            setResumeText('');
             setParseError('');
         } else {
-            setParseError('Unsupported file type. Please upload a .txt file. You can also paste your resume content directly.');
+            setParseError('Unsupported file type. Please upload a .txt or .pdf file.');
             setFileName('');
-            setResumeText('');
+            setResumeFile(null);
         }
     };
-
+    
+    const fileToBase64 = (file: File): Promise<string> => 
+        new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                const result = reader.result as string;
+                resolve(result.split(',')[1]); 
+            };
+            reader.onerror = error => reject(error);
+        });
 
     const handleParseResume = async () => {
-        if (!resumeText.trim()) return;
+        if (!resumeText.trim() && !resumeFile) return;
         setIsParsing(true);
         setParseError('');
         try {
-            const parsedProfile = await geminiService.parseResumeToProfile(resumeText, language);
+            let parsedProfile: Partial<UserProfile>;
+
+            if (resumeFile) {
+                const base64Data = await fileToBase64(resumeFile);
+                const fileData = { data: base64Data, mimeType: resumeFile.type };
+                parsedProfile = await geminiService.parseResumeFileToProfile(fileData, language);
+            } else {
+                parsedProfile = await geminiService.parseResumeToProfile(resumeText, language);
+            }
+
             setProfile(prev => ({
                 ...prev,
                 ...parsedProfile,
@@ -225,7 +241,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 <p className="text-slate-400 mb-6">{t.autofill_description}</p>
                 
                 <form id="form-file-upload" className="relative" onDragEnter={handleDrag} onSubmit={(e) => e.preventDefault()}>
-                    <input ref={inputRef} type="file" id="input-file-upload" className="hidden" onChange={handleFileChange} accept=".txt" />
+                    <input ref={inputRef} type="file" id="input-file-upload" className="hidden" onChange={handleFileChange} accept=".txt,.pdf" />
                     <label 
                         id="label-file-upload" 
                         htmlFor="input-file-upload" 
@@ -253,6 +269,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                     value={resumeText}
                     onChange={(e) => {
                         setResumeText(e.target.value);
+                        if (resumeFile) setResumeFile(null);
                         if (fileName) setFileName('');
                     }}
                     placeholder={t.paste_resume_placeholder}
@@ -262,7 +279,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 {parseError && <p className="text-red-400 mt-2 text-sm">{parseError}</p>}
                 <div className="flex justify-between items-center mt-8">
                     <button onClick={() => setView('welcome')} className="px-6 py-2 bg-gray-600 rounded-lg hover:bg-gray-500 transition" disabled={isParsing}>{t.back_button}</button>
-                    <button onClick={handleParseResume} className="px-6 py-2 bg-orange-600 rounded-lg hover:bg-orange-700 transition font-bold flex items-center gap-2" disabled={isParsing || !resumeText.trim()}>
+                    <button onClick={handleParseResume} className="px-6 py-2 bg-orange-600 rounded-lg hover:bg-orange-700 transition font-bold flex items-center gap-2" disabled={isParsing || (!resumeText.trim() && !resumeFile)}>
                         {isParsing ? (
                             <>
                                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

@@ -71,7 +71,7 @@ const ActionPlanView: React.FC = () => {
 
     const scholarshipsWithTasks = actionPlan.reduce((acc, item) => {
         const scholarship = getScholarshipById(item.scholarshipId);
-        if (scholarship) {
+        if (scholarship && scholarship.feedback !== 'bad') {
             if (!acc[scholarship.id]) {
                 acc[scholarship.id] = { ...scholarship, tasks: [] };
             }
