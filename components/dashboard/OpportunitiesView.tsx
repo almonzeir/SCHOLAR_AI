@@ -1,5 +1,4 @@
 import React, { useRef } from 'react';
-// FIX: Updated imports for React 18 compatibility.
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { useAppContext } from '../../contexts/AppContext';
@@ -8,8 +7,15 @@ import { CalendarIcon, ThumbsUpIcon, ThumbsDownIcon, CalendarPlusIcon, SparklesI
 import { translations } from '../../translations';
 import LoadingView from '../LoadingView';
 
-const ScholarshipCard: React.FC<{ scholarship: Scholarship, isPdfView?: boolean }> = React.memo(({ scholarship, isPdfView = false }) => {
-    const { language, updateScholarshipFeedback, theme } = useAppContext();
+interface ScholarshipCardProps {
+    scholarship: Scholarship;
+    isPdfView?: boolean;
+    language: 'ar' | 'en';
+    theme: 'light' | 'dark';
+    updateScholarshipFeedback: (scholarshipId: string, feedback: 'good' | 'bad') => void;
+}
+
+const ScholarshipCard: React.FC<ScholarshipCardProps> = React.memo(({ scholarship, isPdfView = false, language, theme, updateScholarshipFeedback }) => {
     const t = translations[language];
 
     const scoreColors: { [key: string]: string } = {
@@ -94,9 +100,8 @@ const ScholarshipCard: React.FC<{ scholarship: Scholarship, isPdfView?: boolean 
 });
 
 const OpportunitiesView: React.FC = () => {
-    const { scholarships, loading, language, userProfile, theme } = useAppContext();
+    const { scholarships, loading, language, userProfile, theme, updateScholarshipFeedback } = useAppContext();
     const t = translations[language];
-    const pdfExportRef = useRef<HTMLDivElement>(null);
 
     const handleExportPdf = () => {
         const input = document.createElement('div');
@@ -111,12 +116,20 @@ const OpportunitiesView: React.FC = () => {
             <div className={`${theme} p-8 bg-slate-50 dark:bg-slate-900`} style={{ fontFamily: "'Cairo', 'Inter', sans-serif"}}>
                  <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: theme === 'light' ? 'black' : 'white', textAlign: 'center', marginBottom: '20px' }}>{t.opportunities_title} for {userProfile?.name}</h1>
                  <div className="grid grid-cols-2 gap-6">
-                    {scholarships.filter(s => s.feedback !== 'bad').map(s => <ScholarshipCard key={s.id} scholarship={s} isPdfView={true} />)}
+                    {scholarships.filter(s => s.feedback !== 'bad').map(s => 
+                        <ScholarshipCard 
+                            key={s.id} 
+                            scholarship={s} 
+                            isPdfView={true}
+                            language={language}
+                            theme={theme}
+                            updateScholarshipFeedback={() => {}}
+                        />)
+                    }
                 </div>
             </div>
         );
 
-        // FIX: Use React 18 createRoot API for rendering content for PDF export.
         const root = createRoot(input);
         
         // Use flushSync to ensure the component is rendered before calling html2canvas.
@@ -185,7 +198,7 @@ const OpportunitiesView: React.FC = () => {
 
                 {goodMatches.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {goodMatches.map(s => <ScholarshipCard key={s.id} scholarship={s} />)}
+                        {goodMatches.map(s => <ScholarshipCard key={s.id} scholarship={s} language={language} theme={theme} updateScholarshipFeedback={updateScholarshipFeedback} />)}
                     </div>
                 ) : (
                     <div className="text-center py-12 bg-slate-100 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">

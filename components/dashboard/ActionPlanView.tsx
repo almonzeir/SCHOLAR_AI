@@ -17,13 +17,16 @@ const ActionPlanView: React.FC = () => {
     const t = translations[language];
 
     const groupedPlan = useMemo(() => {
-        // FIX: Using a string-keyed record to ensure proper type inference with Object.entries.
-        // This resolves an issue where `items` was inferred as `unknown`, causing a crash on `.map`.
-        return actionPlan.reduce((acc, item) => {
+        // FIX: Explicitly typed the accumulator in `reduce` to solve a type inference issue
+        // where the grouped items were being inferred as 'unknown', causing a crash on `.map`.
+        return actionPlan.reduce((acc: Record<string, ActionItem[]>, item) => {
             const weekKey = String(item.week);
-            (acc[weekKey] = acc[weekKey] || []).push(item);
+            if (!acc[weekKey]) {
+                acc[weekKey] = [];
+            }
+            acc[weekKey].push(item);
             return acc;
-        }, {} as Record<string, ActionItem[]>);
+        }, {});
     }, [actionPlan]);
 
     const handleAddToCalendar = (task: string, scholarshipId: string) => {
