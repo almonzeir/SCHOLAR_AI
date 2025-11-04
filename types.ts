@@ -55,3 +55,20 @@ export interface ActionItem {
     week: number;
     completed: boolean;
 }
+
+// FIX: Consolidated all global type declarations into a single file to prevent
+// declaration conflicts and improve code organization, resolving an error in App.tsx.
+declare global {
+    interface Window {
+        jspdf: {
+            jsPDF: new (orientation?: 'p' | 'l', unit?: string, format?: string) => any;
+        };
+        SpeechRecognition: any;
+        webkitSpeechRecognition: any;
+    }
+
+    function html2canvas(
+        element: HTMLElement,
+        options?: any
+    ): Promise<HTMLCanvasElement>;
+}

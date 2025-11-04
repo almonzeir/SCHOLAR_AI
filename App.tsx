@@ -29,29 +29,30 @@ function App() {
 
   return (
     <AppProvider>
-        <AppContent 
-            view={view} 
-            userProfile={userProfile} 
-            onOnboardingComplete={handleOnboardingComplete}
-        />
+      <AppContent
+        view={view}
+        userProfile={userProfile}
+        onOnboardingComplete={handleOnboardingComplete}
+      />
     </AppProvider>
   );
 }
 
 // Sub-component to access the context
 const AppContent = ({ view, userProfile, onOnboardingComplete }: any) => {
-    
-    return (
-        <div className="min-h-screen text-slate-900 dark:bg-slate-900">
-           {view === 'onboarding' ? (
-            <Onboarding onComplete={onOnboardingComplete} />
-          ) : userProfile ? (
-            <Dashboard initialProfile={userProfile} />
-          ) : (
-            <div className="flex items-center justify-center h-screen">Loading...</div>
-          )}
-        </div>
-    )
+
+  return (
+    <div className="min-h-screen text-slate-900 dark:bg-slate-900">
+      {view === 'onboarding' ? (
+        <Onboarding onComplete={onOnboardingComplete} />
+      ) : userProfile ? (
+        <Dashboard initialProfile={userProfile} />
+      ) : (
+        // This case should ideally not be hit if logic is correct
+        <Onboarding onComplete={onOnboardingComplete} />
+      )}
+    </div>
+  )
 }
 
 export default App;

@@ -8,16 +8,6 @@ import { CalendarIcon, ThumbsUpIcon, ThumbsDownIcon, CalendarPlusIcon, SparklesI
 import { translations } from '../../translations';
 import LoadingView from '../LoadingView';
 
-declare global {
-    interface Window {
-        jspdf: {
-            jsPDF: new (orientation?: 'p' | 'l', unit?: string, format?: string) => any;
-        };
-    }
-    function html2canvas(element: HTMLElement, options?: any): Promise<HTMLCanvasElement>;
-}
-
-
 const ScholarshipCard: React.FC<{ scholarship: Scholarship, isPdfView?: boolean }> = ({ scholarship, isPdfView = false }) => {
     const { language, updateScholarshipFeedback, theme } = useAppContext();
     const t = translations[language];

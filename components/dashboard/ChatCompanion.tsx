@@ -5,13 +5,6 @@ import { BotIcon, SendIcon, SparklesIcon, MicIcon, UserIcon } from '../icons';
 import { useAppContext } from '../../contexts/AppContext';
 import { translations } from '../../translations';
 
-declare global {
-    interface Window {
-        SpeechRecognition: any;
-        webkitSpeechRecognition: any;
-    }
-}
-
 const ChatCompanion: React.FC = () => {
     const { language } = useAppContext();
     const t = translations[language];

@@ -161,10 +161,7 @@ export const parseResumeToProfile = async (resumeText: string, language: string)
 
     } catch (error: any) {
         console.error("Error parsing resume:", error);
-        if (error.message && error.message.toLowerCase().includes('api key')) {
-            throw new Error("AI service configuration error. The API key might be invalid or missing in this environment.");
-        }
-        throw new Error("Failed to parse resume with AI. Please try again or fill the form manually.");
+        throw new Error("Failed to parse resume with AI. The service may be temporarily unavailable.");
     }
 };
 
@@ -199,10 +196,7 @@ export const parseResumeFileToProfile = async (file: { data: string; mimeType: s
 
     } catch (error: any) {
         console.error("Error parsing resume file:", error);
-        if (error.message && error.message.toLowerCase().includes('api key')) {
-            throw new Error("AI service configuration error. The API key might be invalid or missing in this environment.");
-        }
-        throw new Error("Failed to parse resume file with AI. Please try again or fill the form manually.");
+        throw new Error("Failed to parse resume file with AI. The service may be temporarily unavailable.");
     }
 };
 
@@ -235,10 +229,7 @@ export const parseAudioToProfile = async (audio: { data: string; mimeType: strin
         return JSON.parse(jsonStr);
     } catch (error: any) {
         console.error("Error parsing audio file:", error);
-         if (error.message && error.message.toLowerCase().includes('api key')) {
-            throw new Error("AI service configuration error. The API key might be invalid or missing in this environment.");
-        }
-        throw new Error("Failed to parse audio with AI. Please try again or fill the form manually.");
+        throw new Error("Failed to parse audio with AI. The service may be temporarily unavailable.");
     }
 };
 
@@ -266,7 +257,7 @@ export const findAndRankScholarships = async (profile: UserProfile, language: st
         const scholarships: Scholarship[] = JSON.parse(jsonStr);
         return scholarships;
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error finding scholarships:", error);
         throw new Error("Could not find scholarships. The AI service may be temporarily unavailable.");
     }
@@ -282,9 +273,9 @@ export const generateProfileSummary = async (profile: UserProfile, language: str
         });
 
         return response.text;
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error generating summary:", error);
-        throw new Error("Could not generate profile summary.");
+        throw new Error("Could not generate profile summary. The AI service may be temporarily unavailable.");
     }
 };
 
@@ -298,7 +289,7 @@ export const generateProfileFeedback = async (profile: UserProfile, scholarships
             contents: prompt,
         });
         return response.text;
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error generating profile feedback:", error);
         return "Could not generate personalized feedback at this time.";
     }
@@ -315,9 +306,14 @@ export const startChatSession = (language: string) => {
 };
 
 export const sendMessageToAI = async (message: string, language: string): Promise<GenerateContentResponse> => {
-    if (!chat) {
-        startChatSession(language);
+    try {
+        if (!chat) {
+            startChatSession(language);
+        }
+        const response = await chat.sendMessage({ message });
+        return response;
+    } catch (error: any) {
+        console.error("Error sending chat message:", error);
+        throw new Error("Failed to get a response from the AI assistant. The service may be temporarily unavailable.");
     }
-    const response = await chat.sendMessage({ message });
-    return response;
 };
