@@ -9,7 +9,10 @@ let chat: Chat;
 const getAiClient = (): GoogleGenAI => {
     if (!ai) {
         try {
-            ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+         ai = new GoogleGenAI({
+    apiKey: "AIzaSyDkZTNI8DqVHOQPEr9xYRYqFh_1GSckV0s",
+});
+
         } catch (error) {
             console.error("Failed to initialize GoogleGenAI client:", error);
             throw new Error("Could not initialize AI Service. Please check your API key and network connection.");
