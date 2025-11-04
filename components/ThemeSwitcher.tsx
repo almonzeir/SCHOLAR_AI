@@ -2,7 +2,7 @@ import React from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { SunIcon, MoonIcon } from './icons';
 
-export const ThemeSwitcher = ({ isDashboard }: { isDashboard: boolean }) => {
+export const ThemeSwitcher = React.memo(({ isDashboard }: { isDashboard: boolean }) => {
     const { theme, toggleTheme } = useAppContext();
 
     const commonClasses = "p-2 rounded-full transition-colors";
@@ -17,4 +17,4 @@ export const ThemeSwitcher = ({ isDashboard }: { isDashboard: boolean }) => {
             {theme === 'light' ? <MoonIcon className="w-5 h-5" /> : <SunIcon className="w-5 h-5" />}
         </button>
     );
-};
+});

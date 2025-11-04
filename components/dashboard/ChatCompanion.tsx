@@ -5,6 +5,20 @@ import { BotIcon, SendIcon, SparklesIcon, MicIcon, UserIcon } from '../icons';
 import { useAppContext } from '../../contexts/AppContext';
 import { translations } from '../../translations';
 
+// PERF: Memoize chat messages to prevent re-rendering the entire list on each new message.
+const MemoizedChatMessage: React.FC<{ message: ChatMessage }> = React.memo(({ message }) => {
+    return (
+        <div className={`flex items-start gap-3 ${message.role === 'user' ? 'justify-end flex-row-reverse' : 'justify-start'}`}>
+            {message.role === 'model' && <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0"><BotIcon className="w-5 h-5 text-orange-500"/></div>}
+            <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${message.role === 'user' ? 'bg-orange-500 text-white rounded-bl-none' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-br-none'}`}>
+                <p className="text-sm">{message.content}</p>
+            </div>
+            {message.role === 'user' && <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center flex-shrink-0"><UserIcon className="w-5 h-5 text-slate-500"/></div>}
+        </div>
+    );
+});
+
+
 const ChatCompanion: React.FC = () => {
     const { language } = useAppContext();
     const t = translations[language];
@@ -101,13 +115,7 @@ const ChatCompanion: React.FC = () => {
 
                     <div className="flex-grow p-4 overflow-y-auto space-y-4">
                         {messages.map((msg, index) => (
-                            <div key={index} className={`flex items-start gap-3 ${msg.role === 'user' ? 'justify-end flex-row-reverse' : 'justify-start'}`}>
-                                {msg.role === 'model' && <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0"><BotIcon className="w-5 h-5 text-orange-500"/></div>}
-                                <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${msg.role === 'user' ? 'bg-orange-500 text-white rounded-bl-none' : 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-br-none'}`}>
-                                    <p className="text-sm">{msg.content}</p>
-                                </div>
-                                {msg.role === 'user' && <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center flex-shrink-0"><UserIcon className="w-5 h-5 text-slate-500"/></div>}
-                            </div>
+                           <MemoizedChatMessage key={index} message={msg} />
                         ))}
                         {isLoading && (
                             <div className="flex items-start gap-3 justify-start">

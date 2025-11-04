@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAppContext } from '../contexts/AppContext';
 
-export const LanguageSwitcher = ({ isDashboard }: { isDashboard: boolean }) => {
+export const LanguageSwitcher = React.memo(({ isDashboard }: { isDashboard: boolean }) => {
     const { language, setLanguage } = useAppContext();
 
     const commonClasses = "px-3 py-1 text-sm font-semibold rounded-full transition-colors backdrop-blur-sm";
@@ -12,4 +12,4 @@ export const LanguageSwitcher = ({ isDashboard }: { isDashboard: boolean }) => {
             {language === 'ar' ? 'English' : 'العربية'}
         </button>
     );
-};
+});

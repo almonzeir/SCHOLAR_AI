@@ -88,4 +88,4 @@ const ProfileView: React.FC = () => {
     );
 };
 
-export default ProfileView;
+export default React.memo(ProfileView);

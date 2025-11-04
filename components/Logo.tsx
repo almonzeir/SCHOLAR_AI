@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const Logo: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+export const Logo: React.FC<React.SVGProps<SVGSVGElement>> = React.memo((props) => (
   <svg viewBox="0 0 100 75" xmlns="http://www.w3.org/2000/svg" {...props}>
     <defs>
       <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
@@ -72,4 +72,4 @@ export const Logo: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
         <circle cx="75" cy="29" r="1" stroke="none" fill="url(#orange-glow)" />
     </g>
   </svg>
-);
+));

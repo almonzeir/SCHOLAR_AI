@@ -46,6 +46,17 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const visualizerRef = useRef<HTMLCanvasElement>(null);
     // FIX: Initialize useRef with a value (null) to resolve type error.
     const animationFrameRef = useRef<number | null>(null);
+    // PERF: Create AudioContext once and reuse.
+    const audioContextRef = useRef<AudioContext | null>(null);
+
+    // PERF: Cleanup AudioContext on unmount.
+    useEffect(() => {
+        return () => {
+            if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+                audioContextRef.current.close();
+            }
+        };
+    }, []);
 
     const isStepValid = useMemo(() => {
         switch (step) {
@@ -207,7 +218,10 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     };
 
     const visualize = (stream: MediaStream) => {
-        const audioContext = new AudioContext();
+        if (!audioContextRef.current) {
+            audioContextRef.current = new AudioContext();
+        }
+        const audioContext = audioContextRef.current;
         const source = audioContext.createMediaStreamSource(stream);
         const analyser = audioContext.createAnalyser();
         analyser.fftSize = 256;

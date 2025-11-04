@@ -8,7 +8,7 @@ import { CalendarIcon, ThumbsUpIcon, ThumbsDownIcon, CalendarPlusIcon, SparklesI
 import { translations } from '../../translations';
 import LoadingView from '../LoadingView';
 
-const ScholarshipCard: React.FC<{ scholarship: Scholarship, isPdfView?: boolean }> = ({ scholarship, isPdfView = false }) => {
+const ScholarshipCard: React.FC<{ scholarship: Scholarship, isPdfView?: boolean }> = React.memo(({ scholarship, isPdfView = false }) => {
     const { language, updateScholarshipFeedback, theme } = useAppContext();
     const t = translations[language];
 
@@ -91,7 +91,7 @@ const ScholarshipCard: React.FC<{ scholarship: Scholarship, isPdfView?: boolean 
             </div>
         </div>
     );
-};
+});
 
 const OpportunitiesView: React.FC = () => {
     const { scholarships, loading, language, userProfile, theme } = useAppContext();

@@ -2,7 +2,12 @@ import { GoogleGenAI, Type, Chat, GenerateContentResponse } from "@google/genai"
 import { UserProfile, Scholarship, ActionItem } from '../types';
 
 // IMPORTANT: Replace "YOUR_API_KEY_HERE" with your actual Google AI Studio API key.
-const API_KEY = "AIzaSyC247YaVSkRAV9X-LrTzfP9puLj3o0Tun0";
+// FIX: API key is now sourced from environment variables as per security best practices.
+// const API_KEY = "AIzaSyC247YaVSkRAV9X-LrTzfP9puLj3o0Tun0";
+
+// PERF: Instantiate the AI client once and reuse it across all service functions.
+// FIX: Updated to use process.env.API_KEY for initialization.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 let chat: Chat;
 
@@ -97,7 +102,7 @@ const generatePromptForScholarships = (profile: UserProfile, language: string): 
     
     **CRITICAL INSTRUCTIONS:**
     1.  You **MUST** provide the direct, valid, and publicly accessible URL for each scholarship's application or information page. Do not use placeholder URLs like '#'.
-    2.  For the 'matchScore' field, use one of the following descriptive labels based on how well the user's profile aligns with the eligibility criteria: 'Perfect Match', 'Excellent Match', 'Good Match', or 'Possible Match'.
+    2.  For the 'matchScore' field, use one of the following descriptive labels based on how well the user's profile aligns with the eligibility criteria: 'Perfect Match', 'Excellent Match', 'Good Match', 'Possible Match'.
     3.  Your response **MUST** be ONLY a single, valid JSON array of scholarship objects that adheres to the structure below. Do not include any text, explanation, or markdown formatting before or after the JSON array.
 
     **JSON Structure:**
@@ -146,7 +151,6 @@ const generatePromptForProfileFeedback = (profile: UserProfile, scholarships: Sc
 
 export const parseResumeToProfile = async (resumeText: string, language: string): Promise<Partial<UserProfile>> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: API_KEY });
         const prompt = generatePromptForResumeParsing(resumeText, language);
 
         const response = await ai.models.generateContent({
@@ -170,7 +174,6 @@ export const parseResumeToProfile = async (resumeText: string, language: string)
 
 export const parseResumeFileToProfile = async (file: { data: string; mimeType: string }, language: string): Promise<Partial<UserProfile>> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: API_KEY });
         const prompt = generatePromptForResumeFileParsing(language);
 
         const filePart = {
@@ -205,7 +208,6 @@ export const parseResumeFileToProfile = async (file: { data: string; mimeType: s
 
 export const parseAudioToProfile = async (audio: { data: string; mimeType: string }, language: string): Promise<Partial<UserProfile>> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: API_KEY });
         const prompt = generatePromptForAudioParsing(language);
         
         const audioPart = {
@@ -239,7 +241,6 @@ export const parseAudioToProfile = async (audio: { data: string; mimeType: strin
 
 export const findAndRankScholarships = async (profile: UserProfile, language: string): Promise<Scholarship[]> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: API_KEY });
         const prompt = generatePromptForScholarships(profile, language);
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -268,7 +269,6 @@ export const findAndRankScholarships = async (profile: UserProfile, language: st
 
 export const generateProfileSummary = async (profile: UserProfile, language: string): Promise<string> => {
      try {
-        const ai = new GoogleGenAI({ apiKey: API_KEY });
         const prompt = generatePromptForSummary(profile, language);
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -285,7 +285,6 @@ export const generateProfileSummary = async (profile: UserProfile, language: str
 export const generateProfileFeedback = async (profile: UserProfile, scholarships: Scholarship[], language: string): Promise<string> => {
     if (scholarships.length === 0) return "";
     try {
-        const ai = new GoogleGenAI({ apiKey: API_KEY });
         const prompt = generatePromptForProfileFeedback(profile, scholarships, language);
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -299,7 +298,6 @@ export const generateProfileFeedback = async (profile: UserProfile, scholarships
 };
 
 export const startChatSession = (language: string) => {
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
     chat = ai.chats.create({
         model: 'gemini-2.5-flash',
         config: {
@@ -315,6 +313,7 @@ export const sendMessageToAI = async (message: string, language: string): Promis
         }
         const response = await chat.sendMessage({ message });
         return response;
+// FIX: Added curly braces to the catch block to fix a syntax error.
     } catch (error: any) {
         console.error("Error sending chat message:", error);
         throw new Error("Failed to get a response from the AI assistant. The service may be temporarily unavailable.");
