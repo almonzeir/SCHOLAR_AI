@@ -1,61 +1,49 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
-import { UserProfile } from './types';
-import { AppProvider } from './contexts/AppContext';
+import { AppProvider, useAppContext } from './contexts/AppContext';
+import { Logo } from './components/Logo';
 
-const APP_STORAGE_key = 'scholarai_user_profile';
+// This new component is the main router for the app. It consumes the
+// centralized state from AppContext to decide what to render.
+const AppContent = () => {
+  const { view, onboardingComplete, userProfile } = useAppContext();
 
-// Moved AppContent outside of the App component to prevent it from being
-// re-created on every render, which ensures a stable component tree and
-// prevents unexpected unmounting and state loss issues.
-const AppContent = ({ view, userProfile, onOnboardingComplete }: {
-  view: 'onboarding' | 'dashboard';
-  userProfile: UserProfile | null;
-  onOnboardingComplete: (profile: UserProfile) => void;
-}) => {
-  return (
-    <div className="min-h-screen text-slate-900 dark:bg-slate-900">
-      {view === 'onboarding' ? (
-        <Onboarding onComplete={onOnboardingComplete} />
-      ) : userProfile ? (
-        <Dashboard initialProfile={userProfile} />
-      ) : (
-        // This case should ideally not be hit if logic is correct
-        <Onboarding onComplete={onOnboardingComplete} />
-      )}
-    </div>
-  );
+  // The 'loading' state occurs for a brief moment while the context
+  // checks localStorage for an existing profile.
+  if (view === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Logo className="w-24 h-24 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (view === 'onboarding') {
+    return <Onboarding onComplete={onboardingComplete} />;
+  }
+
+  // The Dashboard is only rendered when the view is set and a user profile exists.
+  if (view === 'dashboard' && userProfile) {
+    // The Dashboard no longer needs to be passed an initialProfile prop,
+    // as it gets the profile directly from the context.
+    return <Dashboard />;
+  }
+
+  // Fallback case, which should ideally not be reached.
+  return <Onboarding onComplete={onboardingComplete} />;
 };
 
+
 function App() {
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
-    try {
-      const savedProfile = localStorage.getItem(APP_STORAGE_key);
-      return savedProfile ? JSON.parse(savedProfile) : null;
-    } catch (error) {
-      console.error("Failed to parse user profile from localStorage", error);
-      return null;
-    }
-  });
-
-  const [view, setView] = useState<'onboarding' | 'dashboard'>(
-    userProfile ? 'dashboard' : 'onboarding'
-  );
-
-  const handleOnboardingComplete = useCallback((profile: UserProfile) => {
-    localStorage.setItem(APP_STORAGE_key, JSON.stringify(profile));
-    setUserProfile(profile);
-    setView('dashboard');
-  }, []);
-
+  // All state logic (useState, useCallback) has been removed from App.tsx
+  // and is now handled exclusively by AppProvider, making this component
+  // a clean, stable entry point.
   return (
     <AppProvider>
-      <AppContent
-        view={view}
-        userProfile={userProfile}
-        onOnboardingComplete={handleOnboardingComplete}
-      />
+      <div className="min-h-screen text-slate-900 dark:bg-slate-900">
+        <AppContent />
+      </div>
     </AppProvider>
   );
 }

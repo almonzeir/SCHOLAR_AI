@@ -4,6 +4,7 @@ import * as geminiService from '../services/geminiService';
 
 type Language = 'ar' | 'en';
 type Theme = 'light' | 'dark';
+type View = 'loading' | 'onboarding' | 'dashboard';
 
 const APP_STORAGE_KEY = 'scholarai_user_profile';
 const ACTION_PLAN_STORAGE_KEY = 'scholarai_action_plan';
@@ -19,6 +20,7 @@ interface AppContextType {
   planError: string | null;
   language: Language;
   profileUpdated: boolean;
+  view: View;
   setLanguage: (lang: Language) => void;
   initializeDataForProfile: (profile: UserProfile, isRescan?: boolean) => void;
   getScholarshipById: (id: string) => Scholarship | undefined;
@@ -27,6 +29,7 @@ interface AppContextType {
   clearError: () => void;
   generateActionPlan: () => void;
   updateActionItemStatus: (itemId: string, completed: boolean) => void;
+  onboardingComplete: (profile: UserProfile) => void;
   theme: Theme;
   toggleTheme: () => void;
 }
@@ -38,14 +41,9 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-    const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
-        try {
-            const savedProfile = localStorage.getItem(APP_STORAGE_KEY);
-            return savedProfile ? JSON.parse(savedProfile) : null;
-        } catch (error) {
-            return null;
-        }
-    });
+    // All primary state is now managed solely within this provider.
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    const [view, setView] = useState<View>('loading');
     const [scholarships, setScholarships] = useState<Scholarship[]>([]);
     const [actionPlan, setActionPlan] = useState<ActionItem[]>(() => {
         try {
@@ -55,7 +53,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             return [];
         }
     });
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isPlanLoading, setIsPlanLoading] = useState(false);
     const [planError, setPlanError] = useState<string | null>(null);
@@ -69,6 +67,29 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     });
     const [profileUpdated, setProfileUpdated] = useState(false);
     
+    // This effect runs ONCE on mount to determine the initial application state.
+    useEffect(() => {
+        try {
+            const savedProfile = localStorage.getItem(APP_STORAGE_KEY);
+            if (savedProfile) {
+                const profile = JSON.parse(savedProfile);
+                setUserProfile(profile);
+                // Automatically fetch data if a profile exists.
+                initializeDataForProfile(profile);
+                setView('dashboard');
+            } else {
+                setLoading(false);
+                setView('onboarding');
+            }
+        } catch (error) {
+            console.error("Failed to load user profile, starting onboarding.", error);
+            localStorage.removeItem(APP_STORAGE_KEY);
+            setLoading(false);
+            setView('onboarding');
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     useEffect(() => {
         document.documentElement.lang = language;
         document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
@@ -106,7 +127,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             setScholarships(foundScholarships);
             
             if (isRescan) {
-                // Clear the old plan when rescanning
                 setActionPlan([]);
             }
 
@@ -116,6 +136,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             setLoading(false);
         }
     }, [language]);
+    
+    // This function is now the bridge between Onboarding and the main app state.
+    const onboardingComplete = useCallback((profile: UserProfile) => {
+        try {
+            localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(profile));
+            setUserProfile(profile);
+            initializeDataForProfile(profile);
+            setView('dashboard');
+        } catch (err) {
+            console.error("Failed to save profile after onboarding", err);
+            setError("There was a problem saving your profile. Please try again.");
+        }
+    }, [initializeDataForProfile]);
 
     const getScholarshipById = useCallback((id: string) => {
         return scholarships.find(s => s.id === id);
@@ -169,6 +202,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         planError,
         language,
         profileUpdated,
+        view,
         setLanguage,
         initializeDataForProfile,
         getScholarshipById,
@@ -177,6 +211,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         clearError,
         generateActionPlan,
         updateActionItemStatus,
+        onboardingComplete,
         theme,
         toggleTheme,
     };

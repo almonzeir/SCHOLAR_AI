@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import ProfileView from './dashboard/ProfileView';
 import OpportunitiesView from './dashboard/OpportunitiesView';
@@ -6,22 +6,20 @@ import ActionPlanView from './dashboard/ActionPlanView';
 import ChatCompanion from './dashboard/ChatCompanion';
 import { UserIcon, TargetIcon, CalendarIcon } from './icons';
 import { translations } from '../translations';
-import { UserProfile } from '../types';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { Logo } from './Logo';
 import { ThemeSwitcher } from './ThemeSwitcher';
 
 
-const Dashboard: React.FC<{initialProfile: UserProfile}> = ({ initialProfile }) => {
+const Dashboard: React.FC = () => {
+    // The component no longer needs the `initialProfile` prop. It gets everything
+    // it needs from the context, which is now the single source of truth.
     const { userProfile, initializeDataForProfile, language, profileUpdated, error, clearError } = useAppContext();
     const [activeTab, setActiveTab] = useState<Tab>('opportunities');
     const t = translations[language];
 
-    useEffect(() => {
-        if(initialProfile){
-            initializeDataForProfile(initialProfile);
-        }
-    }, [initialProfile]);
+    // The useEffect for initial data loading has been removed, as this is now
+    // handled centrally by the AppProvider when the app first loads.
 
     const handleRescan = () => {
         if(userProfile){
