@@ -1,6 +1,9 @@
 import { GoogleGenAI, Type, Chat, GenerateContentResponse } from "@google/genai";
 import { UserProfile, Scholarship, ActionItem } from '../types';
 
+// IMPORTANT: Replace "YOUR_API_KEY_HERE" with your actual Google AI Studio API key.
+const API_KEY = "AIzaSyC247YaVSkRAV9X-LrTzfP9puLj3o0Tun0";
+
 let chat: Chat;
 
 const userProfileSchema = {
@@ -143,7 +146,7 @@ const generatePromptForProfileFeedback = (profile: UserProfile, scholarships: Sc
 
 export const parseResumeToProfile = async (resumeText: string, language: string): Promise<Partial<UserProfile>> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: API_KEY });
         const prompt = generatePromptForResumeParsing(resumeText, language);
 
         const response = await ai.models.generateContent({
@@ -167,7 +170,7 @@ export const parseResumeToProfile = async (resumeText: string, language: string)
 
 export const parseResumeFileToProfile = async (file: { data: string; mimeType: string }, language: string): Promise<Partial<UserProfile>> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: API_KEY });
         const prompt = generatePromptForResumeFileParsing(language);
 
         const filePart = {
@@ -202,7 +205,7 @@ export const parseResumeFileToProfile = async (file: { data: string; mimeType: s
 
 export const parseAudioToProfile = async (audio: { data: string; mimeType: string }, language: string): Promise<Partial<UserProfile>> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: API_KEY });
         const prompt = generatePromptForAudioParsing(language);
         
         const audioPart = {
@@ -236,7 +239,7 @@ export const parseAudioToProfile = async (audio: { data: string; mimeType: strin
 
 export const findAndRankScholarships = async (profile: UserProfile, language: string): Promise<Scholarship[]> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: API_KEY });
         const prompt = generatePromptForScholarships(profile, language);
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -265,7 +268,7 @@ export const findAndRankScholarships = async (profile: UserProfile, language: st
 
 export const generateProfileSummary = async (profile: UserProfile, language: string): Promise<string> => {
      try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: API_KEY });
         const prompt = generatePromptForSummary(profile, language);
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -282,7 +285,7 @@ export const generateProfileSummary = async (profile: UserProfile, language: str
 export const generateProfileFeedback = async (profile: UserProfile, scholarships: Scholarship[], language: string): Promise<string> => {
     if (scholarships.length === 0) return "";
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: API_KEY });
         const prompt = generatePromptForProfileFeedback(profile, scholarships, language);
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
@@ -296,7 +299,7 @@ export const generateProfileFeedback = async (profile: UserProfile, scholarships
 };
 
 export const startChatSession = (language: string) => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: API_KEY });
     chat = ai.chats.create({
         model: 'gemini-2.5-flash',
         config: {
