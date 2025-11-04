@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import ProfileView from './dashboard/ProfileView';
 import OpportunitiesView from './dashboard/OpportunitiesView';
+import ActionPlanView from './dashboard/ActionPlanView';
 import ChatCompanion from './dashboard/ChatCompanion';
 import { UserIcon, TargetIcon, CalendarIcon } from './icons';
 import { translations } from '../translations';
@@ -29,10 +30,11 @@ const Dashboard: React.FC<{initialProfile: UserProfile}> = ({ initialProfile }) 
         }
     };
 
-    type Tab = 'profile' | 'opportunities';
+    type Tab = 'profile' | 'opportunities' | 'actionPlan';
 
     const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
         { id: 'opportunities', label: t.tab_opportunities, icon: <TargetIcon className="w-5 h-5" /> },
+        { id: 'actionPlan', label: t.tab_action_plan, icon: <CalendarIcon className="w-5 h-5" /> },
         { id: 'profile', label: t.tab_profile, icon: <UserIcon className="w-5 h-5" /> },
     ];
 
@@ -42,6 +44,8 @@ const Dashboard: React.FC<{initialProfile: UserProfile}> = ({ initialProfile }) 
                 return <ProfileView />;
             case 'opportunities':
                 return <OpportunitiesView />;
+            case 'actionPlan':
+                return <ActionPlanView />;
             default:
                 return null;
         }

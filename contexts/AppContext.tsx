@@ -6,13 +6,17 @@ type Language = 'ar' | 'en';
 type Theme = 'light' | 'dark';
 
 const APP_STORAGE_KEY = 'scholarai_user_profile';
+const ACTION_PLAN_STORAGE_KEY = 'scholarai_action_plan';
 const THEME_STORAGE_KEY = 'scholarai_theme';
 
 interface AppContextType {
   userProfile: UserProfile | null;
   scholarships: Scholarship[];
+  actionPlan: ActionItem[];
   loading: boolean;
   error: string | null;
+  isPlanLoading: boolean;
+  planError: string | null;
   language: Language;
   profileUpdated: boolean;
   setLanguage: (lang: Language) => void;
@@ -21,6 +25,8 @@ interface AppContextType {
   updateScholarshipFeedback: (scholarshipId: string, feedback: 'good' | 'bad') => void;
   updateUserProfile: (newProfile: UserProfile) => void;
   clearError: () => void;
+  generateActionPlan: () => void;
+  updateActionItemStatus: (itemId: string, completed: boolean) => void;
   theme: Theme;
   toggleTheme: () => void;
 }
@@ -32,106 +38,156 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [scholarships, setScholarships] = useState<Scholarship[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [language, setLanguageState] = useState<Language>('ar');
-  const [profileUpdated, setProfileUpdated] = useState(false);
-  const [theme, setTheme] = useState<Theme>(() => {
-    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme;
-    if (savedTheme) return savedTheme;
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        return 'dark';
-    }
-    return 'light';
-  });
-
-  const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    document.documentElement.lang = lang;
-    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-  };
-
-  const toggleTheme = () => {
-    setTheme(prev => {
-        const newTheme = prev === 'light' ? 'dark' : 'light';
-        localStorage.setItem(THEME_STORAGE_KEY, newTheme);
-        return newTheme;
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
+        try {
+            const savedProfile = localStorage.getItem(APP_STORAGE_KEY);
+            return savedProfile ? JSON.parse(savedProfile) : null;
+        } catch (error) {
+            return null;
+        }
     });
-  };
-
-  useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove(theme === 'light' ? 'dark' : 'light');
-    root.classList.add(theme);
-  }, [theme]);
-
-  useEffect(() => {
-    document.documentElement.lang = language;
-    document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
-  }, [language]);
-  
-  useEffect(() => {
-    if (userProfile) {
-      localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(userProfile));
-    }
-  }, [userProfile]);
-
-  const initializeDataForProfile = useCallback(async (profile: UserProfile, isRescan = false) => {
-    setLoading(true);
-    setError(null);
-    if (!isRescan) {
-      setUserProfile(profile);
-    }
+    const [scholarships, setScholarships] = useState<Scholarship[]>([]);
+    const [actionPlan, setActionPlan] = useState<ActionItem[]>(() => {
+        try {
+            const savedPlan = localStorage.getItem(ACTION_PLAN_STORAGE_KEY);
+            return savedPlan ? JSON.parse(savedPlan) : [];
+        } catch (error) {
+            return [];
+        }
+    });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [isPlanLoading, setIsPlanLoading] = useState(false);
+    const [planError, setPlanError] = useState<string | null>(null);
+    const [language, setLanguageState] = useState<Language>(() => {
+        const savedLang = localStorage.getItem('scholarai_language') as Language;
+        return savedLang || 'en';
+    });
+    const [theme, setThemeState] = useState<Theme>(() => {
+        const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme;
+        return savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    });
+    const [profileUpdated, setProfileUpdated] = useState(false);
     
-    setProfileUpdated(false);
+    useEffect(() => {
+        document.documentElement.lang = language;
+        document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
+        localStorage.setItem('scholarai_language', language);
+    }, [language]);
+    
+    useEffect(() => {
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem(THEME_STORAGE_KEY, theme);
+    }, [theme]);
 
-    try {
-      const foundScholarships = await geminiService.findAndRankScholarships(profile, language);
-      
-      const [summary, feedback] = await Promise.all([
-          geminiService.generateProfileSummary(profile, language),
-          geminiService.generateProfileFeedback(profile, foundScholarships, language)
-      ]);
-      
-      setUserProfile(prev => prev ? {...prev, summary, profileFeedback: feedback} : {...profile, summary, profileFeedback: feedback});
-      setScholarships(foundScholarships);
+    useEffect(() => {
+        localStorage.setItem(ACTION_PLAN_STORAGE_KEY, JSON.stringify(actionPlan));
+    }, [actionPlan]);
 
-    } catch (e: any) {
-        setError(e.message || "An unexpected error occurred. Please try again.");
-        console.error("Failed to initialize data:", e);
-    } finally {
-        setLoading(false);
-    }
-  }, [language]);
+    const setLanguage = (lang: Language) => setLanguageState(lang);
+    const toggleTheme = () => setThemeState(prev => (prev === 'light' ? 'dark' : 'light'));
 
-  const updateScholarshipFeedback = (scholarshipId: string, feedback: 'good' | 'bad') => {
-    setScholarships(prev => prev.map(s => s.id === scholarshipId ? { ...s, feedback } : s));
-  };
+    const initializeDataForProfile = useCallback(async (profile: UserProfile, isRescan = false) => {
+        setLoading(true);
+        setError(null);
+        setProfileUpdated(false);
+        try {
+            const foundScholarships = await geminiService.findAndRankScholarships(profile, language);
+            const summary = await geminiService.generateProfileSummary(profile, language);
+            const feedback = await geminiService.generateProfileFeedback(profile, foundScholarships, language);
+            
+            const profileWithAIInsights: UserProfile = { ...profile, summary, profileFeedback: feedback };
 
-  const updateUserProfile = (newProfile: UserProfile) => {
-    setUserProfile(newProfile);
-    setProfileUpdated(true);
-  };
+            setUserProfile(profileWithAIInsights);
+            setScholarships(foundScholarships);
+            
+            if (isRescan) {
+                // Clear the old plan when rescanning
+                setActionPlan([]);
+            }
 
-  const getScholarshipById = useCallback((id: string) => {
-    return scholarships.find(s => s.id === id);
-  }, [scholarships]);
+        } catch (e: any) {
+            setError(e.message || 'An unknown error occurred during initialization.');
+        } finally {
+            setLoading(false);
+        }
+    }, [language]);
 
-  const clearError = () => setError(null);
+    const getScholarshipById = useCallback((id: string) => {
+        return scholarships.find(s => s.id === id);
+    }, [scholarships]);
 
-  return (
-    <AppContext.Provider value={{ userProfile, scholarships, loading, error, language, profileUpdated, setLanguage, initializeDataForProfile, getScholarshipById, updateScholarshipFeedback, updateUserProfile, clearError, theme, toggleTheme }}>
-      {children}
-    </AppContext.Provider>
-  );
+    const updateScholarshipFeedback = useCallback((scholarshipId: string, feedback: 'good' | 'bad') => {
+        setScholarships(prev =>
+            prev.map(s =>
+                s.id === scholarshipId ? { ...s, feedback: s.feedback === feedback ? undefined : feedback } : s
+            )
+        );
+    }, []);
+
+    const updateUserProfile = (newProfile: UserProfile) => {
+        localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(newProfile));
+        setUserProfile(newProfile);
+        setProfileUpdated(true);
+    };
+
+    const clearError = () => setError(null);
+    
+    const generateActionPlan = useCallback(async () => {
+        setIsPlanLoading(true);
+        setPlanError(null);
+        try {
+            const likedScholarships = scholarships.filter(s => s.feedback !== 'bad');
+            if (likedScholarships.length === 0) {
+                 setActionPlan([]);
+                 return;
+            }
+            const plan = await geminiService.generateActionPlan(likedScholarships, language);
+            setActionPlan(plan);
+        } catch (e: any) {
+            setPlanError(e.message || 'Failed to generate action plan.');
+        } finally {
+            setIsPlanLoading(false);
+        }
+    }, [scholarships, language]);
+
+    const updateActionItemStatus = (itemId: string, completed: boolean) => {
+        setActionPlan(prev => prev.map(item => item.id === itemId ? { ...item, completed } : item));
+    };
+
+    const value: AppContextType = {
+        userProfile,
+        scholarships,
+        actionPlan,
+        loading,
+        error,
+        isPlanLoading,
+        planError,
+        language,
+        profileUpdated,
+        setLanguage,
+        initializeDataForProfile,
+        getScholarshipById,
+        updateScholarshipFeedback,
+        updateUserProfile,
+        clearError,
+        generateActionPlan,
+        updateActionItemStatus,
+        theme,
+        toggleTheme,
+    };
+
+    return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
 
 export const useAppContext = (): AppContextType => {
-  const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error('useAppContext must be used within an AppProvider');
-  }
-  return context;
+    const context = useContext(AppContext);
+    if (context === undefined) {
+        throw new Error('useAppContext must be used within an AppProvider');
+    }
+    return context;
 };

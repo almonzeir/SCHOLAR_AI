@@ -148,6 +148,38 @@ const generatePromptForProfileFeedback = (profile: UserProfile, scholarships: Sc
     `;
 };
 
+const generatePromptForActionPlan = (scholarships: Scholarship[], language: string): string => {
+    const actionItemSchema = `
+    [
+      {
+        "id": "string (unique identifier for the task)",
+        "scholarshipId": "string (the ID of the scholarship this task is for)",
+        "task": "string (a clear, actionable task description including the scholarship name)",
+        "week": "number (the week number, starting from 1 for the upcoming week)",
+        "completed": "boolean (always false initially)"
+      }
+    ]`;
+
+    return `You are an expert academic advisor. Based on the following list of scholarships a user is interested in, create a detailed, week-by-week action plan to help them apply successfully. Today's date is ${new Date().toISOString().split('T')[0]}.
+
+    **CRITICAL INSTRUCTIONS:**
+    1.  For each scholarship, create 2-4 essential tasks (e.g., draft essay, request recommendation letters, finalize application, submit).
+    2.  Distribute these tasks across weeks, starting from week 1 (this upcoming week).
+    3.  Work backward from each scholarship's deadline to schedule the tasks logically. Submission should be in the final week before the deadline. Earlier tasks like drafting should come first.
+    4.  The 'task' description **MUST** include the name of the scholarship it pertains to.
+    5.  Your response **MUST** be ONLY a single, valid JSON array of action item objects that adheres to the structure below. Do not include any text, explanation, or markdown formatting before or after the JSON array.
+
+    **JSON Structure:**
+    \`\`\`json
+    ${actionItemSchema}
+    \`\`\`
+
+    **User's Selected Scholarships:**
+    ${scholarships.map(s => `- ID: ${s.id}, Name: ${s.name}, Deadline: ${s.deadline}`).join('\n')}
+
+    Respond in ${language}.`;
+};
+
 
 export const parseResumeToProfile = async (resumeText: string, language: string): Promise<Partial<UserProfile>> => {
     try {
@@ -294,6 +326,43 @@ export const generateProfileFeedback = async (profile: UserProfile, scholarships
     } catch (error: any) {
         console.error("Error generating profile feedback:", error);
         return "Could not generate personalized feedback at this time.";
+    }
+};
+
+export const generateActionPlan = async (scholarships: Scholarship[], language: string): Promise<ActionItem[]> => {
+    try {
+        if (scholarships.length === 0) return [];
+        const prompt = generatePromptForActionPlan(scholarships, language);
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            id: { type: Type.STRING },
+                            scholarshipId: { type: Type.STRING },
+                            task: { type: Type.STRING },
+                            week: { type: Type.NUMBER },
+                            completed: { type: Type.BOOLEAN },
+                        },
+                        required: ['id', 'scholarshipId', 'task', 'week', 'completed']
+                    }
+                }
+            }
+        });
+        
+        const jsonStr = response.text.trim();
+        const plan: ActionItem[] = JSON.parse(jsonStr);
+        return plan;
+
+    } catch (error: any) {
+        console.error("Error generating action plan:", error);
+        throw new Error("Could not generate an action plan. The AI service may be temporarily unavailable.");
     }
 };
 
