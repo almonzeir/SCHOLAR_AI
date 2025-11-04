@@ -17,16 +17,16 @@ const ActionPlanView: React.FC = () => {
     const t = translations[language];
 
     const groupedPlan = useMemo(() => {
-        // FIX: Provided a generic type to `reduce` to correctly type the accumulator.
+        // FIX: Cast the initial value of `reduce` to correctly type the accumulator.
         // This resolves an issue where `items` was inferred as 'unknown', causing a crash on `.map`.
-        return actionPlan.reduce<Record<string, ActionItem[]>>((acc, item) => {
+        return actionPlan.reduce((acc, item) => {
             const weekKey = String(item.week);
             if (!acc[weekKey]) {
                 acc[weekKey] = [];
             }
             acc[weekKey].push(item);
             return acc;
-        }, {});
+        }, {} as Record<string, ActionItem[]>);
     }, [actionPlan]);
 
     const handleAddToCalendar = (task: string, scholarshipId: string) => {

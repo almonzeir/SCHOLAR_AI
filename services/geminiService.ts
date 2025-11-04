@@ -1,15 +1,22 @@
 import { GoogleGenAI, Type, Chat, GenerateContentResponse } from "@google/genai";
 import { UserProfile, Scholarship, ActionItem } from '../types';
 
-// IMPORTANT: Replace "YOUR_API_KEY_HERE" with your actual Google AI Studio API key.
-// FIX: API key is now sourced from environment variables as per security best practices.
-// const API_KEY = "AIzaSyC247YaVSkRAV9X-LrTzfP9puLj3o0Tun0";
-
-// PERF: Instantiate the AI client once and reuse it across all service functions.
-// FIX: Updated to use process.env.API_KEY for initialization.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
+let ai: GoogleGenAI | null = null;
 let chat: Chat;
+
+// Lazy initialization of the AI client.
+// This prevents the app from crashing on startup if the API key isn't immediately available.
+const getAiClient = (): GoogleGenAI => {
+    if (!ai) {
+        try {
+            ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        } catch (error) {
+            console.error("Failed to initialize GoogleGenAI client:", error);
+            throw new Error("Could not initialize AI Service. Please check your API key and network connection.");
+        }
+    }
+    return ai;
+};
 
 const userProfileSchema = {
     type: Type.OBJECT,
@@ -184,8 +191,9 @@ const generatePromptForActionPlan = (scholarships: Scholarship[], language: stri
 export const parseResumeToProfile = async (resumeText: string, language: string): Promise<Partial<UserProfile>> => {
     try {
         const prompt = generatePromptForResumeParsing(resumeText, language);
+        const aiClient = getAiClient();
 
-        const response = await ai.models.generateContent({
+        const response = await aiClient.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
@@ -207,6 +215,7 @@ export const parseResumeToProfile = async (resumeText: string, language: string)
 export const parseResumeFileToProfile = async (file: { data: string; mimeType: string }, language: string): Promise<Partial<UserProfile>> => {
     try {
         const prompt = generatePromptForResumeFileParsing(language);
+        const aiClient = getAiClient();
 
         const filePart = {
             inlineData: {
@@ -219,7 +228,7 @@ export const parseResumeFileToProfile = async (file: { data: string; mimeType: s
             text: prompt,
         };
 
-        const response = await ai.models.generateContent({
+        const response = await aiClient.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: { parts: [textPart, filePart] },
             config: {
@@ -241,6 +250,7 @@ export const parseResumeFileToProfile = async (file: { data: string; mimeType: s
 export const parseAudioToProfile = async (audio: { data: string; mimeType: string }, language: string): Promise<Partial<UserProfile>> => {
     try {
         const prompt = generatePromptForAudioParsing(language);
+        const aiClient = getAiClient();
         
         const audioPart = {
             inlineData: {
@@ -253,7 +263,7 @@ export const parseAudioToProfile = async (audio: { data: string; mimeType: strin
             text: prompt,
         };
 
-        const response = await ai.models.generateContent({
+        const response = await aiClient.models.generateContent({
             model: 'gemini-2.5-flash', // A model that supports audio input
             contents: { parts: [textPart, audioPart] },
             config: {
@@ -274,7 +284,8 @@ export const parseAudioToProfile = async (audio: { data: string; mimeType: strin
 export const findAndRankScholarships = async (profile: UserProfile, language: string): Promise<Scholarship[]> => {
     try {
         const prompt = generatePromptForScholarships(profile, language);
-        const response = await ai.models.generateContent({
+        const aiClient = getAiClient();
+        const response = await aiClient.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
@@ -302,7 +313,8 @@ export const findAndRankScholarships = async (profile: UserProfile, language: st
 export const generateProfileSummary = async (profile: UserProfile, language: string): Promise<string> => {
      try {
         const prompt = generatePromptForSummary(profile, language);
-        const response = await ai.models.generateContent({
+        const aiClient = getAiClient();
+        const response = await aiClient.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
         });
@@ -318,7 +330,8 @@ export const generateProfileFeedback = async (profile: UserProfile, scholarships
     if (scholarships.length === 0) return "";
     try {
         const prompt = generatePromptForProfileFeedback(profile, scholarships, language);
-        const response = await ai.models.generateContent({
+        const aiClient = getAiClient();
+        const response = await aiClient.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
         });
@@ -333,8 +346,9 @@ export const generateActionPlan = async (scholarships: Scholarship[], language: 
     try {
         if (scholarships.length === 0) return [];
         const prompt = generatePromptForActionPlan(scholarships, language);
+        const aiClient = getAiClient();
         
-        const response = await ai.models.generateContent({
+        const response = await aiClient.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: {
@@ -367,7 +381,8 @@ export const generateActionPlan = async (scholarships: Scholarship[], language: 
 };
 
 export const startChatSession = (language: string) => {
-    chat = ai.chats.create({
+    const aiClient = getAiClient();
+    chat = aiClient.chats.create({
         model: 'gemini-2.5-flash',
         config: {
             systemInstruction: `You are ScholarAI, a helpful and encouraging AI assistant for students seeking scholarships. Your goal is to provide guidance, answer questions about the application process, and help users stay motivated. You have access to the user's profile but not the specific scholarships they are viewing. Keep your answers concise and friendly. Respond in ${language}.`,
@@ -382,7 +397,6 @@ export const sendMessageToAI = async (message: string, language: string): Promis
         }
         const response = await chat.sendMessage({ message });
         return response;
-// FIX: Added curly braces to the catch block to fix a syntax error.
     } catch (error: any) {
         console.error("Error sending chat message:", error);
         throw new Error("Failed to get a response from the AI assistant. The service may be temporarily unavailable.");
