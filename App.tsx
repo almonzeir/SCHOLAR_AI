@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
-import Header from './components/Header';
 import { UserProfile } from './types';
 import { AppProvider } from './contexts/AppContext';
 
@@ -43,8 +42,7 @@ function App() {
 const AppContent = ({ view, userProfile, onOnboardingComplete }: any) => {
     
     return (
-        <div className="min-h-screen text-slate-900 dark:text-slate-100">
-           <Header />
+        <div className="min-h-screen text-slate-900 dark:bg-slate-900">
            {view === 'onboarding' ? (
             <Onboarding onComplete={onOnboardingComplete} />
           ) : userProfile ? (

@@ -22,6 +22,7 @@ export interface UserProfile {
   studyInterests: string[];
   summary?: string;
   aiReviewNotes?: string;
+  profileFeedback?: string;
 }
 
 export interface Scholarship {
@@ -35,7 +36,7 @@ export interface Scholarship {
   continent: string;
   fieldOfStudy: string;
   url: string;
-  matchScore: number;
+  matchScore: string;
   matchReason: string;
   effortScore: 'Low' | 'Medium' | 'High';
   feedback?: 'good' | 'bad';

@@ -1,7 +1,6 @@
 import { Scholarship } from './types';
 
-// FIX: Added `url`, `matchScore`, and `matchReason` to scholarship objects
-// to align with the `Scholarship` type definition.
+// FIX: Updated `matchScore` to be a string to align with new types.
 export const MOCK_SCHOLARSHIPS: Scholarship[] = [
   {
     id: 's1',
@@ -14,9 +13,8 @@ export const MOCK_SCHOLARSHIPS: Scholarship[] = [
     continent: 'North America',
     fieldOfStudy: 'STEM',
     url: '#',
-    matchScore: 95,
+    matchScore: 'Excellent Match',
     matchReason: 'Your profile shows strong leadership and interest in STEM.',
-    // FIX: Added missing effortScore property.
     effortScore: 'High',
   },
   {
@@ -30,9 +28,8 @@ export const MOCK_SCHOLARSHIPS: Scholarship[] = [
     continent: 'Europe',
     fieldOfStudy: 'Arts',
     url: '#',
-    matchScore: 88,
+    matchScore: 'Good Match',
     matchReason: 'A good fit if you have a background in the arts.',
-    // FIX: Added missing effortScore property.
     effortScore: 'Medium',
 
   },
@@ -47,9 +44,8 @@ export const MOCK_SCHOLARSHIPS: Scholarship[] = [
     continent: 'Any',
     fieldOfStudy: 'Any',
     url: '#',
-    matchScore: 82,
+    matchScore: 'Good Match',
     matchReason: 'Matches your interest in community involvement.',
-    // FIX: Added missing effortScore property.
     effortScore: 'Low',
   },
   {
@@ -63,9 +59,8 @@ export const MOCK_SCHOLARSHIPS: Scholarship[] = [
     continent: 'Asia',
     fieldOfStudy: 'STEM',
     url: '#',
-    matchScore: 92,
+    matchScore: 'Excellent Match',
     matchReason: 'Excellent match for your Computer Science background.',
-    // FIX: Added missing effortScore property.
     effortScore: 'Medium',
   },
   {
@@ -79,9 +74,8 @@ export const MOCK_SCHOLARSHIPS: Scholarship[] = [
     continent: 'North America',
     fieldOfStudy: 'Any',
     url: '#',
-    matchScore: 78,
+    matchScore: 'Possible Match',
     matchReason: 'Applicable if you are a first-generation college student.',
-    // FIX: Added missing effortScore property.
     effortScore: 'Low',
   },
 ];

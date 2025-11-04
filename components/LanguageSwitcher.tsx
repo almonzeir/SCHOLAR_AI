@@ -1,16 +1,14 @@
 import React from 'react';
 import { useAppContext } from '../contexts/AppContext';
 
-export const LanguageSwitcher = () => {
+export const LanguageSwitcher = ({ isDashboard }: { isDashboard: boolean }) => {
     const { language, setLanguage } = useAppContext();
-    const isDashboard = window.location.pathname.includes('dashboard'); // A simple check
 
-    const commonClasses = "px-3 py-1 text-sm font-semibold rounded-full text-white transition-colors backdrop-blur-sm";
-    const dashboardClasses = "bg-gray-700 hover:bg-gray-600";
-    const onboardingClasses = "absolute top-6 right-6 bg-gray-700/50 hover:bg-gray-600/50";
+    const commonClasses = "px-3 py-1 text-sm font-semibold rounded-full transition-colors backdrop-blur-sm";
+    const buttonClasses = "text-slate-800 bg-slate-200 hover:bg-slate-300 dark:text-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600";
     
     return (
-        <button onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')} className={`${commonClasses} ${isDashboard ? dashboardClasses : onboardingClasses}`}>
+        <button onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')} className={`${commonClasses} ${buttonClasses}`}>
             {language === 'ar' ? 'English' : 'العربية'}
         </button>
     );

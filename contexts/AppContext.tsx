@@ -3,24 +3,26 @@ import { UserProfile, Scholarship, ActionItem } from '../types';
 import * as geminiService from '../services/geminiService';
 
 type Language = 'ar' | 'en';
+type Theme = 'light' | 'dark';
 
 const APP_STORAGE_KEY = 'scholarai_user_profile';
+const THEME_STORAGE_KEY = 'scholarai_theme';
 
 interface AppContextType {
   userProfile: UserProfile | null;
   scholarships: Scholarship[];
-  actionPlan: ActionItem[];
   loading: boolean;
   error: string | null;
   language: Language;
   profileUpdated: boolean;
   setLanguage: (lang: Language) => void;
   initializeDataForProfile: (profile: UserProfile, isRescan?: boolean) => void;
-  updateActionItem: (id: string, completed: boolean) => void;
   getScholarshipById: (id: string) => Scholarship | undefined;
   updateScholarshipFeedback: (scholarshipId: string, feedback: 'good' | 'bad') => void;
   updateUserProfile: (newProfile: UserProfile) => void;
   clearError: () => void;
+  theme: Theme;
+  toggleTheme: () => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -28,17 +30,38 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
-  const [actionPlan, setActionPlan] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [language, setLanguageState] = useState<Language>('ar');
   const [profileUpdated, setProfileUpdated] = useState(false);
+  const [theme, setTheme] = useState<Theme>(() => {
+    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY) as Theme;
+    if (savedTheme) return savedTheme;
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+    }
+    return 'light';
+  });
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
   };
+
+  const toggleTheme = () => {
+    setTheme(prev => {
+        const newTheme = prev === 'light' ? 'dark' : 'light';
+        localStorage.setItem(THEME_STORAGE_KEY, newTheme);
+        return newTheme;
+    });
+  };
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove(theme === 'light' ? 'dark' : 'light');
+    root.classList.add(theme);
+  }, [theme]);
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -63,14 +86,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try {
       const foundScholarships = await geminiService.findAndRankScholarships(profile, language);
       
-      const [summary, generatedPlan] = await Promise.all([
+      const [summary, feedback] = await Promise.all([
           geminiService.generateProfileSummary(profile, language),
-          geminiService.generateSmartActionPlan(foundScholarships, profile, language)
+          geminiService.generateProfileFeedback(profile, foundScholarships, language)
       ]);
       
-      setUserProfile(prev => prev ? {...prev, summary} : profile);
+      setUserProfile(prev => prev ? {...prev, summary, profileFeedback: feedback} : {...profile, summary, profileFeedback: feedback});
       setScholarships(foundScholarships);
-      setActionPlan(generatedPlan);
+
     } catch (e: any) {
         setError(e.message || "An unexpected error occurred. Please try again.");
         console.error("Failed to initialize data:", e);
@@ -88,10 +111,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setProfileUpdated(true);
   };
 
-  const updateActionItem = (id: string, completed: boolean) => {
-    setActionPlan(prev => prev.map(item => item.id === id ? { ...item, completed } : item));
-  };
-
   const getScholarshipById = useCallback((id: string) => {
     return scholarships.find(s => s.id === id);
   }, [scholarships]);
@@ -99,7 +118,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const clearError = () => setError(null);
 
   return (
-    <AppContext.Provider value={{ userProfile, scholarships, actionPlan, loading, error, language, profileUpdated, setLanguage, initializeDataForProfile, updateActionItem, getScholarshipById, updateScholarshipFeedback, updateUserProfile, clearError }}>
+    <AppContext.Provider value={{ userProfile, scholarships, loading, error, language, profileUpdated, setLanguage, initializeDataForProfile, getScholarshipById, updateScholarshipFeedback, updateUserProfile, clearError, theme, toggleTheme }}>
       {children}
     </AppContext.Provider>
   );
