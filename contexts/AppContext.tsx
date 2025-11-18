@@ -10,7 +10,7 @@ const APP_STORAGE_KEY = 'scholarai_user_profile';
 const ACTION_PLAN_STORAGE_KEY = 'scholarai_action_plan';
 const THEME_STORAGE_KEY = 'scholarai_theme';
 
-interface AppContextType {
+export interface AppContextType {
   userProfile: UserProfile | null;
   scholarships: Scholarship[];
   actionPlan: ActionItem[];

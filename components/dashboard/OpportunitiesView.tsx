@@ -7,6 +7,42 @@ import { CalendarIcon, ThumbsUpIcon, ThumbsDownIcon, CalendarPlusIcon, SparklesI
 import { translations } from '../../translations';
 import LoadingView from '../LoadingView';
 
+// New component for visualizing the match score
+const MatchScoreRing = ({ score, size = 40 }: { score: string, size?: number }) => {
+    const getPercentage = (s: string) => {
+        switch(s) {
+            case 'Perfect Match': return 98;
+            case 'Excellent Match': return 85;
+            case 'Good Match': return 70;
+            case 'Possible Match': return 50;
+            default: return 0;
+        }
+    };
+    const percentage = getPercentage(score);
+    const radius = (size - 4) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const offset = circumference - (percentage / 100) * circumference;
+    
+    const getColor = (p: number) => {
+        if (p >= 90) return 'text-green-500';
+        if (p >= 80) return 'text-blue-500';
+        if (p >= 60) return 'text-orange-500';
+        return 'text-slate-400';
+    }
+
+    return (
+        <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+            <svg className="transform -rotate-90 w-full h-full">
+                <circle cx={size/2} cy={size/2} r={radius} stroke="currentColor" strokeWidth="4" fill="transparent" className="text-slate-200 dark:text-slate-700" />
+                <circle cx={size/2} cy={size/2} r={radius} stroke="currentColor" strokeWidth="4" fill="transparent" 
+                        strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
+                        className={`${getColor(percentage)} transition-all duration-1000 ease-out`} />
+            </svg>
+            <span className="absolute text-[10px] font-bold text-slate-700 dark:text-slate-300">{percentage}%</span>
+        </div>
+    );
+}
+
 interface ScholarshipCardProps {
     scholarship: Scholarship;
     isPdfView?: boolean;
@@ -17,13 +53,6 @@ interface ScholarshipCardProps {
 
 const ScholarshipCard: React.FC<ScholarshipCardProps> = React.memo(({ scholarship, isPdfView = false, language, theme, updateScholarshipFeedback }) => {
     const t = translations[language];
-
-    const scoreColors: { [key: string]: string } = {
-        'Perfect Match': 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300 border border-green-200 dark:border-green-700',
-        'Excellent Match': 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 border border-blue-200 dark:border-blue-700',
-        'Good Match': 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-700',
-        'Possible Match': 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300 border border-orange-200 dark:border-orange-700',
-    };
     
     const effortColors = {
         Low: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
@@ -51,12 +80,19 @@ const ScholarshipCard: React.FC<ScholarshipCardProps> = React.memo(({ scholarshi
     return (
         <div className={`bg-white dark:bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-200 dark:border-slate-700 ${!isPdfView && 'hover:border-orange-500 hover:scale-[1.02] transition-all duration-300'} flex flex-col justify-between h-full ${scholarship.feedback === 'bad' ? 'opacity-50' : ''}`}>
             <div>
-                <div className="flex justify-between items-start mb-4 gap-4">
-                    <div>
-                        <h3 className="text-xl font-bold text-slate-900 dark:text-white">{scholarship.name}</h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">{scholarship.organization}</p>
+                <div className="flex justify-between items-start mb-4 gap-3">
+                    <div className="flex-1">
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white leading-tight">{scholarship.name}</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{scholarship.organization}</p>
                     </div>
-                    <span className={`text-xs text-center font-bold px-3 py-1 rounded-full whitespace-nowrap ${scoreColors[scholarship.matchScore] || 'bg-slate-100 dark:bg-slate-700'}`}>{scholarship.matchScore}</span>
+                    {!isPdfView ? (
+                        <div className="flex flex-col items-center gap-1">
+                            <MatchScoreRing score={scholarship.matchScore} size={44} />
+                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">Match</span>
+                        </div>
+                    ) : (
+                         <span className="text-sm font-bold text-orange-600">{scholarship.matchScore}</span>
+                    )}
                 </div>
                 
                 <div className="flex items-center gap-2 mb-4">

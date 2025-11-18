@@ -1,3 +1,4 @@
+
 export const translations = {
   ar: {
     welcome_user: 'مرحباً، {name}!',
@@ -58,10 +59,10 @@ export const translations = {
     languages: 'اللغات',
     welcome_title: 'افتح مستقبلك مع ScholarAI',
     welcome_subtitle: 'أخبرنا عن نفسك، وسيقوم نظامنا الذكي بإيجاد المنح الدراسية المثالية لك. ابدأ في ثوانٍ.',
-    autofill_resume: 'الملء التلقائي باستخدام السيرة الذاتية',
-    autofill_description: 'وفر الوقت عن طريق تحميل سيرتك الذاتية أو لصقها. سيقوم نظامنا المتقدم باستخراج التفاصيل على الفور.',
-    fill_manually: 'الملء يدوياً',
-    fill_manually_description: 'أنشئ ملفك الشخصي خطوة بخطوة للتحكم الكامل.',
+    autofill_resume: 'السيرة الذاتية',
+    autofill_description: 'تحميل أو لصق السيرة الذاتية لاستخراج التفاصيل فوراً.',
+    fill_manually: 'يدوياً',
+    fill_manually_description: 'بناء ملفك الشخصي خطوة بخطوة.',
     paste_resume_title: 'تحميل أو لصق السيرة الذاتية',
     paste_resume_placeholder: 'الصق محتوى سيرتك الذاتية هنا...',
     parse_button: 'تحليل ذكي',
@@ -72,8 +73,8 @@ export const translations = {
     upload_prompt_secondary: 'أو قم بالسحب والإفلات',
     upload_file_types: 'ملفات TXT, PDF, DOCX فقط',
     upload_or: 'أو',
-    voice_onboarding_title: 'التسجيل بالصوت',
-    voice_onboarding_description: 'أسرع طريقة للبدء. فقط تحدث عن ملفك الشخصي، وسيتولى الذكاء الاصطناعي الباقي.',
+    voice_onboarding_title: 'تحدث إلينا',
+    voice_onboarding_description: 'تحدث عن نفسك وسيقوم الذكاء الاصطناعي بالباقي.',
     voice_onboarding_subtitle: 'انقر على الزر وأخبرنا عن نفسك. سيقوم الذكاء الاصطناعي بالباقي.',
     voice_onboarding_guidance_title: 'للحصول على أفضل النتائج، يرجى ذكر:',
     voice_onboarding_guidance_item1: 'الاسم الكامل',
@@ -82,6 +83,9 @@ export const translations = {
     voice_onboarding_guidance_item4: 'المهارات واللغات',
     voice_onboarding_guidance_item5: 'الأهداف الأكاديمية والاهتمامات الدراسية',
     analyzing_profile: 'جاري تحليل ملفك الشخصي...',
+    feature_smart_matching: 'مطابقة ذكية للمنح',
+    feature_global_access: 'وصول لقاعدة بيانات عالمية',
+    feature_action_plans: 'خطط عمل مخصصة'
   },
   en: {
     welcome_user: 'Welcome, {name}!',
@@ -142,8 +146,8 @@ export const translations = {
     languages: 'Languages',
     welcome_title: 'Unlock Your Future with ScholarAI',
     welcome_subtitle: 'Tell us about yourself, and our intelligent system will find the perfect scholarships for you. Get started in seconds.',
-    autofill_resume: 'Autofill with Resume',
-    autofill_description: 'Save time by uploading or pasting your resume. Our advanced system will instantly extract the details.',
+    autofill_resume: 'Use Resume',
+    autofill_description: 'Upload or paste your resume to extract details instantly.',
     fill_manually: 'Fill Manually',
     fill_manually_description: 'Build your profile step-by-step for full control.',
     paste_resume_title: 'Upload or Paste Resume',
@@ -156,8 +160,8 @@ export const translations = {
     upload_prompt_secondary: 'or drag and drop',
     upload_file_types: 'TXT, PDF, DOCX files only',
     upload_or: 'OR',
-    voice_onboarding_title: 'Onboard with Voice',
-    voice_onboarding_description: 'The fastest way to get started. Just speak your profile, and our AI will handle the rest.',
+    voice_onboarding_title: 'Use Voice',
+    voice_onboarding_description: 'Just speak your profile, and our AI will handle the rest.',
     voice_onboarding_subtitle: 'Click the button and tell us about yourself. Our AI will do the rest.',
     voice_onboarding_guidance_title: 'For best results, please mention your:',
     voice_onboarding_guidance_item1: 'Full Name',
@@ -166,5 +170,8 @@ export const translations = {
     voice_onboarding_guidance_item4: 'Skills & Languages',
     voice_onboarding_guidance_item5: 'Academic Goals & Study Interests',
     analyzing_profile: 'Analyzing your profile...',
+    feature_smart_matching: 'Smart AI Matching',
+    feature_global_access: 'Global Database Access',
+    feature_action_plans: 'Tailored Action Plans'
   },
 };

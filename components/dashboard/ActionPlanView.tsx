@@ -17,16 +17,16 @@ const ActionPlanView: React.FC = () => {
     const t = translations[language];
 
     const groupedPlan = useMemo(() => {
-        // FIX: Cast the initial value of `reduce` to correctly type the accumulator.
-        // This resolves an issue where `items` was inferred as 'unknown', causing a crash on `.map`.
-        return actionPlan.reduce((acc, item) => {
+        // FIX: Explicitly type the accumulator via generic to ensure TypeScript correctly
+        // infers the return type of reduce as Record<string, ActionItem[]>.
+        return actionPlan.reduce<Record<string, ActionItem[]>>((acc, item) => {
             const weekKey = String(item.week);
             if (!acc[weekKey]) {
                 acc[weekKey] = [];
             }
             acc[weekKey].push(item);
             return acc;
-        }, {} as Record<string, ActionItem[]>);
+        }, {});
     }, [actionPlan]);
 
     const handleAddToCalendar = (task: string, scholarshipId: string) => {
@@ -38,11 +38,17 @@ const ActionPlanView: React.FC = () => {
         
         // Make the calendar event for the day of the task, assuming it's for the deadline week
         const deadlineDate = new Date(scholarship.deadline);
-        // This is a rough estimation, not perfect, but good for a demo
-        const eventDate = new Date(deadlineDate.setDate(deadlineDate.getDate() - 7 * (Math.max(...actionPlan.map(i => i.week)) - 1)));
+        
+        // Safely calculate max week and handle empty plan
+        const weeks = (actionPlan || []).map((i: ActionItem) => i.week);
+        const maxWeek = weeks.length > 0 ? Math.max(...weeks) : 1;
+
+        // Correctly calculate the date without mutating the original deadline date object
+        const referenceDate = new Date(deadlineDate);
+        const eventDate = new Date(referenceDate.setDate(referenceDate.getDate() - 7 * (maxWeek - 1)));
+        
         const dateStr = eventDate.toISOString().slice(0, 10).replace(/-/g, '');
         const nextDateStr = new Date(eventDate.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, '');
-
 
         const url = `https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateStr}/${nextDateStr}&details=${description}`;
         window.open(url, '_blank');
@@ -93,7 +99,7 @@ const ActionPlanView: React.FC = () => {
                 </button>
             </div>
 
-            {Object.entries(groupedPlan).sort(([a], [b]) => Number(a) - Number(b)).map(([week, items]) => (
+            {Object.entries(groupedPlan).sort(([a], [b]) => Number(a) - Number(b)).map(([week, items]: [string, ActionItem[]]) => (
                 <div key={week} className="bg-white dark:bg-slate-800 rounded-lg shadow-lg p-6 border border-slate-200 dark:border-slate-700">
                     <h3 className="text-xl font-bold text-orange-600 mb-4">{t.week.replace('{week}', week)}</h3>
                     <ul className="space-y-3">

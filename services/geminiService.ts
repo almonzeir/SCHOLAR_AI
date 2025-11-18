@@ -9,10 +9,7 @@ let chat: Chat;
 const getAiClient = (): GoogleGenAI => {
     if (!ai) {
         try {
-         ai = new GoogleGenAI({
-    apiKey: "AIzaSyDkZTNI8DqVHOQPEr9xYRYqFh_1GSckV0s",
-});
-
+            ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         } catch (error) {
             console.error("Failed to initialize GoogleGenAI client:", error);
             throw new Error("Could not initialize AI Service. Please check your API key and network connection.");
@@ -232,7 +229,7 @@ export const parseResumeFileToProfile = async (file: { data: string; mimeType: s
         };
 
         const response = await aiClient.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.5-pro',
             contents: { parts: [textPart, filePart] },
             config: {
                 responseMimeType: 'application/json',
@@ -267,7 +264,7 @@ export const parseAudioToProfile = async (audio: { data: string; mimeType: strin
         };
 
         const response = await aiClient.models.generateContent({
-            model: 'gemini-2.5-flash', // A model that supports audio input
+            model: 'gemini-2.5-pro',
             contents: { parts: [textPart, audioPart] },
             config: {
                 responseMimeType: 'application/json',
