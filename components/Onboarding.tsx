@@ -2,7 +2,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UserProfile } from '../types';
-import { SparklesIcon, DocumentTextIcon, EditIcon, UploadIcon, MicIcon, StopIcon, CheckIcon, ArrowRightIcon } from './icons';
+import { SparklesIcon, DocumentTextIcon, EditIcon, UploadIcon, MicIcon, StopIcon, CheckIcon, ArrowRightIcon, ShareIcon } from './icons';
 import * as geminiService from '../services/geminiService';
 import { useAppContext } from '../contexts/AppContext';
 import { translations } from '../translations';
@@ -16,7 +16,7 @@ interface OnboardingProps {
 }
 
 const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
-    const [view, setView] = useState<'welcome' | 'parse_resume' | 'form' | 'voice_onboarding'>('welcome');
+    const [view, setView] = useState<'welcome' | 'parse_resume' | 'form' | 'voice_onboarding' | 'viral_share'>('welcome');
     const [step, setStep] = useState(1);
     const [profile, setProfile] = useState<UserProfile>({
         name: '',
@@ -350,9 +350,35 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const handleSubmit = () => {
         if (!isStepValid) return;
         setShowCelebration(true);
+        // Instead of completing immediately, go to Viral Share view
         setTimeout(() => {
-            onComplete(profile);
+            setView('viral_share');
+            setShowCelebration(false);
         }, 1500);
+    };
+
+    const handleShareProfile = async () => {
+        const input = document.getElementById('viral-card');
+        if (!input) return;
+
+        try {
+            const canvas = await (window as any).html2canvas(input, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#0a0a0a',
+            });
+            const imgData = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = `scholarai-agent-${profile.name}.png`;
+            link.href = imgData;
+            link.click();
+
+            // Proceed after sharing
+            setTimeout(() => onComplete(profile), 1000);
+        } catch (e) {
+            console.error(e);
+            onComplete(profile);
+        }
     };
     
     const renderForm = () => {
@@ -547,6 +573,72 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             </motion.div>
         );
     }
+
+    const renderViralShare = () => {
+        return (
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="w-full max-w-lg mx-auto z-10 relative text-center"
+            >
+                <h2 className="text-3xl font-bold text-white mb-8 text-glow">Access Granted</h2>
+
+                {/* The "Agent Card" to share */}
+                <div id="viral-card" className="bg-[#0f172a] p-8 rounded-3xl border border-orange-500/30 shadow-[0_0_50px_rgba(249,115,22,0.15)] relative overflow-hidden mb-8 transform transition-transform hover:scale-105 duration-500">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-amber-500"></div>
+                    <div className="absolute bottom-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-[40px] pointer-events-none"></div>
+
+                    <div className="flex items-center justify-between mb-8">
+                        <Logo className="w-8 h-8 text-orange-500" />
+                        <div className="px-3 py-1 rounded-full border border-orange-500/30 text-[10px] font-mono text-orange-400 uppercase tracking-widest bg-orange-900/10">
+                            Authorized
+                        </div>
+                    </div>
+
+                    <div className="w-24 h-24 mx-auto bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl flex items-center justify-center border border-white/10 mb-6 shadow-inner">
+                        <span className="text-4xl font-black text-white">{profile.name.charAt(0)}</span>
+                    </div>
+
+                    <h3 className="text-2xl font-bold text-white mb-2">{profile.name}</h3>
+                    <p className="text-slate-400 text-sm mb-6 uppercase tracking-wider font-medium">Future Scholar</p>
+
+                    <div className="grid grid-cols-2 gap-4 text-left">
+                        <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                            <div className="text-[10px] text-slate-500 uppercase">Target</div>
+                            <div className="text-sm font-bold text-white truncate">{profile.education[0]?.degree || "N/A"}</div>
+                        </div>
+                        <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                            <div className="text-[10px] text-slate-500 uppercase">Focus</div>
+                            <div className="text-sm font-bold text-white truncate">{profile.skills[0] || "General"}</div>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-white/5">
+                         <div className="text-xs text-slate-500 font-mono">ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</div>
+                    </div>
+                </div>
+
+                <p className="text-slate-400 mb-8 max-w-sm mx-auto">
+                    Your profile has been initialized. Save your Access Card or proceed to the dashboard.
+                </p>
+
+                <div className="flex flex-col gap-4">
+                    <button
+                        onClick={handleShareProfile}
+                        className="w-full py-4 bg-white text-black rounded-xl font-bold text-lg hover:bg-slate-200 transition flex items-center justify-center gap-2 shadow-lg"
+                    >
+                        <ShareIcon className="w-5 h-5" /> Save Agent Card
+                    </button>
+                    <button
+                        onClick={() => onComplete(profile)}
+                        className="w-full py-4 bg-transparent border border-white/10 text-slate-400 rounded-xl font-bold text-lg hover:text-white hover:bg-white/5 transition"
+                    >
+                        Enter Dashboard
+                    </button>
+                </div>
+            </motion.div>
+        );
+    };
 
     const renderParseResume = () => (
         <motion.div
@@ -831,6 +923,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             {view === 'parse_resume' && renderParseResume()}
             {view === 'form' && renderForm()}
             {view === 'voice_onboarding' && renderVoiceOnboarding()}
+            {view === 'viral_share' && renderViralShare()}
         </div>
     );
 };
