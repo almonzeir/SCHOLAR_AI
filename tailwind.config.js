@@ -11,6 +11,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        'deep-space': '#050505', // Added matching color
         background: '#0a0a0a',
         surface: '#121212',
         primary: {
@@ -36,6 +37,8 @@ export default {
         'float': 'float 6s ease-in-out infinite',
         'pulse-glow': 'pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'blob': 'blob 7s infinite',
+        'gradient-x': 'gradient-x 15s ease infinite', // Added
+        'spin-slow': 'spin 12s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -59,7 +62,17 @@ export default {
           '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
           '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
           '100%': { transform: 'translate(0px, 0px) scale(1)' },
-        }
+        },
+        'gradient-x': {
+          '0%, 100%': {
+            'background-size': '200% 200%',
+            'background-position': 'left center'
+          },
+          '50%': {
+            'background-size': '200% 200%',
+            'background-position': 'right center'
+          },
+        },
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
