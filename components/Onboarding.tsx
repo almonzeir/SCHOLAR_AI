@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { UserProfile } from '../types';
 import { SparklesIcon, DocumentTextIcon, EditIcon, UploadIcon, MicIcon, StopIcon, CheckIcon, ArrowRightIcon } from './icons';
 import * as geminiService from '../services/geminiService';
@@ -8,7 +9,7 @@ import { translations } from '../translations';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { Logo } from './Logo';
 import { ThemeSwitcher } from './ThemeSwitcher';
-
+import Confetti from './Confetti';
 
 interface OnboardingProps {
     onComplete: (profile: UserProfile) => void;
@@ -47,6 +48,9 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     const visualizerRef = useRef<HTMLCanvasElement>(null);
     const animationFrameRef = useRef<number | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
+
+    // Celebration State
+    const [showCelebration, setShowCelebration] = useState(false);
 
     useEffect(() => {
         return () => {
@@ -156,6 +160,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             }));
             setView('form');
             setStep(1); 
+            setShowCelebration(true); // Celebrate successful parsing
+            setTimeout(() => setShowCelebration(false), 3000);
         } catch (error: any) {
             setParseError(error.message || t.parse_error);
         } finally {
@@ -208,6 +214,8 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             setProfile(prev => ({ ...prev, ...parsedProfile }));
             setView('form');
             setStep(1);
+            setShowCelebration(true); // Celebrate successful voice parsing
+            setTimeout(() => setShowCelebration(false), 3000);
         } catch (error: any) {
             setParseError(error.message || t.parse_error);
         } finally {
@@ -237,24 +245,71 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             if(canvasCtx){
                 canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
                 
-                const barWidth = (canvas.width / bufferLength) * 2.5;
-                let x = 0;
+                // Holographic Arc Visualizer
+                const centerX = canvas.width / 2;
                 const centerY = canvas.height / 2;
 
-                for (let i = 0; i < bufferLength; i++) {
-                    const v = dataArray[i] / 255.0;
-                    const barHeight = v * canvas.height * 1.5; // Amplify for better visibility
+                // Calculate average volume
+                let sum = 0;
+                for(let i = 0; i < bufferLength; i++) {
+                    sum += dataArray[i];
+                }
+                const average = sum / bufferLength;
+
+                // Base radius pulsates with volume
+                const baseRadius = 50 + (average * 0.8);
+
+                // Draw Glow
+                const gradient = canvasCtx.createRadialGradient(centerX, centerY, baseRadius * 0.5, centerX, centerY, baseRadius * 2);
+                gradient.addColorStop(0, 'rgba(249, 115, 22, 0.9)'); // Orange center
+                gradient.addColorStop(0.5, 'rgba(249, 115, 22, 0.3)');
+                gradient.addColorStop(1, 'rgba(249, 115, 22, 0)');
+
+                canvasCtx.fillStyle = gradient;
+                canvasCtx.beginPath();
+                canvasCtx.arc(centerX, centerY, baseRadius * 2, 0, 2 * Math.PI);
+                canvasCtx.fill();
+
+                // Draw Core Ring
+                canvasCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+                canvasCtx.lineWidth = 4;
+                canvasCtx.shadowBlur = 15;
+                canvasCtx.shadowColor = '#f97316';
+                canvasCtx.beginPath();
+                canvasCtx.arc(centerX, centerY, baseRadius, 0, 2 * Math.PI);
+                canvasCtx.stroke();
+                canvasCtx.shadowBlur = 0; // Reset shadow
+
+                // Draw orbiting particles/frequency bars
+                const radius = baseRadius + 15;
+                const bars = 40;
+                const step = (Math.PI * 2) / bars;
+
+                for (let i = 0; i < bars; i++) {
+                    const dataIndex = Math.floor((i / bars) * (bufferLength / 2));
+                    const value = dataArray[dataIndex] / 255.0;
+                    const barLen = value * 60;
+
+                    const angle = i * step + (Date.now() / 1000); // Rotate slowly
+                    const x1 = centerX + Math.cos(angle) * radius;
+                    const y1 = centerY + Math.sin(angle) * radius;
+                    const x2 = centerX + Math.cos(angle) * (radius + barLen);
+                    const y2 = centerY + Math.sin(angle) * (radius + barLen);
+
+                    canvasCtx.strokeStyle = `rgba(249, 115, 22, ${0.4 + value})`;
+                    canvasCtx.lineWidth = 3;
+                    canvasCtx.beginPath();
+                    canvasCtx.moveTo(x1, y1);
+                    canvasCtx.lineTo(x2, y2);
+                    canvasCtx.stroke();
                     
-                    // Dynamic orange-based color
-                    const opacity = Math.min(1, v + 0.2);
-                    canvasCtx.fillStyle = theme === 'light' 
-                        ? `rgba(249, 115, 22, ${opacity})` // Orange-500
-                        : `rgba(251, 146, 60, ${opacity})`; // Orange-400
-                        
-                    // Draw centered symmetric bars (waveform style)
-                    canvasCtx.fillRect(x, centerY - barHeight / 2, barWidth, barHeight);
-                    
-                    x += barWidth + 1;
+                    // Add particles at tips
+                    if (value > 0.5) {
+                        canvasCtx.fillStyle = '#fff';
+                        canvasCtx.beginPath();
+                        canvasCtx.arc(x2, y2, 2, 0, 2 * Math.PI);
+                        canvasCtx.fill();
+                    }
                 }
             }
         };
@@ -262,7 +317,6 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     };
 
     useEffect(() => {
-        // Redraw canvas if theme changes while recording to update background color
         if (isRecording && audioStreamRef.current) {
             if(animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
             visualize(audioStreamRef.current);
@@ -295,144 +349,256 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
     const handleSubmit = () => {
         if (!isStepValid) return;
-        onComplete(profile);
+        setShowCelebration(true);
+        setTimeout(() => {
+            onComplete(profile);
+        }, 1500);
     };
     
     const renderForm = () => {
-        const inputClasses = "w-full p-3 bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-200 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-orange-500 placeholder-slate-400 dark:placeholder-slate-400";
+        const inputClasses = "w-full p-4 bg-white/5 border border-white/10 text-white rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all backdrop-blur-md placeholder-slate-500";
+
         const renderStepContent = () => {
             switch (step) {
                 case 1:
                     return (
-                        <div className="animate-fade-in">
-                            <h2 className="text-2xl font-bold mb-1 text-slate-900 dark:text-white">{t.profile_title}</h2>
-                            <p className="text-slate-500 dark:text-slate-400 mb-6">{t.full_name}</p>
-                            <input
-                                type="text"
-                                name="name"
-                                value={profile.name}
-                                onChange={handleChange}
-                                placeholder="e.g., Alex Doe"
-                                className={inputClasses}
-                                required
-                            />
-                        </div>
+                        <motion.div
+                            initial={{ opacity: 0, x: 50 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -50 }}
+                            className="space-y-6"
+                        >
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="p-3 rounded-full bg-orange-500/20 text-orange-500 border border-orange-500/30">
+                                    <span className="text-xl font-bold">01</span>
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-white">Identity Check</h2>
+                                    <p className="text-slate-400">Let's start with the basics.</p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-300 mb-2">{t.full_name}</label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={profile.name}
+                                    onChange={handleChange}
+                                    placeholder="e.g., Alex Doe"
+                                    className={inputClasses}
+                                    required
+                                    autoFocus
+                                />
+                            </div>
+                        </motion.div>
                     );
                 case 2:
                     return (
-                        <div className="animate-fade-in">
-                            <h2 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">{t.education}</h2>
-                            {profile.education.map((edu, index) => (
-                                 <div key={index} className="space-y-3 p-4 mb-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-700/30">
-                                    <input name="institution" value={edu.institution} onChange={(e) => handleEducationChange(index, e)} placeholder="Institution *" className={inputClasses.replace('p-3', 'p-2')} required/>
-                                    <input name="degree" value={edu.degree} onChange={(e) => handleEducationChange(index, e)} placeholder="Degree *" className={inputClasses.replace('p-3', 'p-2')} required/>
-                                    <input name="fieldOfStudy" value={edu.fieldOfStudy} onChange={(e) => handleEducationChange(index, e)} placeholder="Field of Study *" className={inputClasses.replace('p-3', 'p-2')} required/>
-                                    <input name="gpa" type="number" step="0.1" value={edu.gpa} onChange={(e) => handleEducationChange(index, e)} placeholder="GPA" className={inputClasses.replace('p-3', 'p-2')}/>
+                        <motion.div
+                            initial={{ opacity: 0, x: 50 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -50 }}
+                            className="space-y-6"
+                        >
+                             <div className="flex items-center gap-4 mb-8">
+                                <div className="p-3 rounded-full bg-orange-500/20 text-orange-500 border border-orange-500/30">
+                                    <span className="text-xl font-bold">02</span>
                                 </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-white">Academic Database</h2>
+                                    <p className="text-slate-400">Log your educational history.</p>
+                                </div>
+                            </div>
+
+                            {profile.education.map((edu, index) => (
+                                 <motion.div
+                                    key={index}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    className="space-y-4 p-6 border border-white/10 rounded-2xl bg-white/5 backdrop-blur-md"
+                                >
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <input name="institution" value={edu.institution} onChange={(e) => handleEducationChange(index, e)} placeholder="Institution *" className={inputClasses} required/>
+                                        <input name="degree" value={edu.degree} onChange={(e) => handleEducationChange(index, e)} placeholder="Degree *" className={inputClasses} required/>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <input name="fieldOfStudy" value={edu.fieldOfStudy} onChange={(e) => handleEducationChange(index, e)} placeholder="Field of Study *" className={inputClasses} required/>
+                                        <input name="gpa" type="number" step="0.1" value={edu.gpa} onChange={(e) => handleEducationChange(index, e)} placeholder="GPA" className={inputClasses}/>
+                                    </div>
+                                </motion.div>
                             ))}
-                             <button onClick={addEducation} className="text-sm text-orange-600 hover:text-orange-500 font-medium flex items-center gap-1">
-                                <span>+ Add another institution</span>
+                             <button onClick={addEducation} className="text-sm text-orange-400 hover:text-orange-300 font-medium flex items-center gap-2 transition-colors px-4 py-2 rounded-lg hover:bg-orange-500/10 border border-transparent hover:border-orange-500/20">
+                                <span className="text-lg">+</span> <span>Add another institution</span>
                              </button>
-                        </div>
+                        </motion.div>
                     );
                 case 3:
                     return (
-                        <div className="animate-fade-in">
-                            <h2 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">{t.skills} & Interests</h2>
-                            <div className="space-y-4">
-                                <textarea name="goals" value={profile.goals} onChange={handleChange} placeholder="What are your academic and career goals? *" className={`${inputClasses} h-24`} required/>
-                                <input type="text" defaultValue={profile.skills.join(', ')} onChange={(e) => handleListChange('skills', e.target.value)} placeholder="Skills (comma-separated, e.g., Python, Research) *" className={inputClasses} required/>
-                                <input type="text" defaultValue={profile.studyInterests.join(', ')} onChange={(e) => handleListChange('studyInterests', e.target.value)} placeholder="Fields of interest (e.g., AI, Marine Biology) *" className={inputClasses} required/>
-                                <input type="text" defaultValue={profile.languages.join(', ')} onChange={(e) => handleListChange('languages', e.target.value)} placeholder="Languages spoken (e.g., English, Spanish)" className={inputClasses}/>
-                                <select name="financialSituation" value={profile.financialSituation} onChange={handleChange} className={inputClasses} required>
-                                    <option value="">Select your financial situation *</option>
-                                    <option value="Significant Need">Significant Need</option>
-                                    <option value="Moderate Need">Moderate Need</option>
-                                    <option value="Some Need">Some Need</option>
-                                    <option value="No Need">No Need</option>
-                                </select>
+                        <motion.div
+                            initial={{ opacity: 0, x: 50 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -50 }}
+                            className="space-y-6"
+                        >
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="p-3 rounded-full bg-orange-500/20 text-orange-500 border border-orange-500/30">
+                                    <span className="text-xl font-bold">03</span>
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-white">Future Projection</h2>
+                                    <p className="text-slate-400">Define your trajectory and constraints.</p>
+                                </div>
                             </div>
-                        </div>
+
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-2">Academic & Career Goals</label>
+                                    <textarea name="goals" value={profile.goals} onChange={handleChange} placeholder="What do you want to achieve? *" className={`${inputClasses} h-32 resize-none`} required/>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-2">Skills</label>
+                                    <input type="text" defaultValue={profile.skills.join(', ')} onChange={(e) => handleListChange('skills', e.target.value)} placeholder="Comma-separated (e.g., Python, Research) *" className={inputClasses} required/>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-2">Interests</label>
+                                    <input type="text" defaultValue={profile.studyInterests.join(', ')} onChange={(e) => handleListChange('studyInterests', e.target.value)} placeholder="Comma-separated (e.g., AI, Marine Biology) *" className={inputClasses} required/>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-300 mb-2">Languages</label>
+                                        <input type="text" defaultValue={profile.languages.join(', ')} onChange={(e) => handleListChange('languages', e.target.value)} placeholder="English, Spanish..." className={inputClasses}/>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-300 mb-2">Financial Need</label>
+                                        <select name="financialSituation" value={profile.financialSituation} onChange={handleChange} className={`${inputClasses} bg-[#1a1a1a]`} required>
+                                            <option value="">Select Situation *</option>
+                                            <option value="Significant Need">Significant Need</option>
+                                            <option value="Moderate Need">Moderate Need</option>
+                                            <option value="Some Need">Some Need</option>
+                                            <option value="No Need">No Need</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
                     );
                 default: return null;
             }
         }
 
         return (
-             <div className="w-full max-w-2xl mx-auto z-10 relative">
-                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-200 dark:border-slate-700 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
-                    <div className="mb-8">
-                        <div className="flex justify-between text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">
-                            <span>Basics</span>
-                            <span>Education</span>
-                            <span>Interests</span>
+             <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="w-full max-w-3xl mx-auto z-10 relative"
+            >
+                <div className="glass-holographic rounded-3xl p-8 md:p-12 border border-white/10 backdrop-blur-xl bg-black/40">
+                    {/* XP Bar Progress */}
+                    <div className="mb-12 relative">
+                        <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-[0.2em]">
+                            <span>Identity</span>
+                            <span>Academics</span>
+                            <span>Future</span>
                         </div>
-                        <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2">
-                            <div className="bg-orange-500 h-2 rounded-full transition-all duration-500 ease-out" style={{ width: `${(step / 3) * 100}%` }}></div>
+                        <div className="w-full bg-white/5 rounded-full h-1 overflow-hidden relative">
+                             {/* Glowing Bar */}
+                            <motion.div
+                                className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-600 to-amber-500 shadow-[0_0_15px_rgba(249,115,22,0.8)]"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${(step / 3) * 100}%` }}
+                                transition={{ duration: 0.5, ease: "easeOut" }}
+                            />
                         </div>
                     </div>
 
-                    <div className="min-h-[320px]">
-                        {renderStepContent()}
+                    <div className="min-h-[400px]">
+                        <AnimatePresence mode="wait">
+                            {renderStepContent()}
+                        </AnimatePresence>
                     </div>
                     
-                    <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-100 dark:border-slate-700">
+                    <div className="flex justify-between items-center mt-12 pt-8 border-t border-white/10">
                         {step > 1 ? (
-                            <button onClick={prevStep} className="px-6 py-2 text-slate-500 hover:text-slate-800 dark:hover:text-white transition font-medium">{t.back_button}</button>
+                            <button onClick={prevStep} className="px-6 py-3 text-slate-400 hover:text-white transition font-medium flex items-center gap-2">
+                                <ArrowRightIcon className="w-4 h-4 rotate-180" /> {t.back_button}
+                            </button>
                         ) : (
-                            <button onClick={() => setView('welcome')} className="px-6 py-2 text-slate-500 hover:text-slate-800 dark:hover:text-white transition font-medium">{t.back_button}</button>
+                            <button onClick={() => setView('welcome')} className="px-6 py-3 text-slate-400 hover:text-white transition font-medium">
+                                Cancel
+                            </button>
                         )}
                         
                         {step < 3 ? (
-                            <button onClick={nextStep} disabled={!isStepValid} className="px-8 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition font-bold shadow-lg hover:shadow-orange-500/30 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed disabled:shadow-none flex items-center gap-2">
-                                Next <ArrowRightIcon className="w-5 h-5" />
+                            <button onClick={nextStep} disabled={!isStepValid} className="px-8 py-4 bg-orange-600 text-white rounded-full hover:bg-orange-500 transition-all font-bold shadow-lg shadow-orange-500/20 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2 transform active:scale-95 border border-orange-400/20">
+                                Next Level <ArrowRightIcon className="w-5 h-5" />
                             </button>
                         ) : (
-                            <button onClick={handleSubmit} disabled={!isStepValid} className="px-8 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition font-bold shadow-lg hover:shadow-orange-500/30 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed disabled:shadow-none">Find Scholarships</button>
+                            <button onClick={handleSubmit} disabled={!isStepValid} className="px-10 py-4 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-full hover:from-orange-500 hover:to-amber-500 transition-all font-bold shadow-xl shadow-orange-500/30 disabled:opacity-30 disabled:cursor-not-allowed transform active:scale-95 flex items-center gap-2 border border-white/20">
+                                <SparklesIcon className="w-5 h-5 animate-pulse" /> Launch System
+                            </button>
                         )}
                     </div>
                 </div>
-            </div>
+            </motion.div>
         );
     }
 
     const renderParseResume = () => (
-        <div className="w-full max-w-2xl mx-auto z-10 relative">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-200 dark:border-slate-700 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
-                <div className="flex items-center justify-between mb-6">
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-3xl mx-auto z-10 relative"
+        >
+            <div className="glass-holographic rounded-3xl p-8 md:p-12 border border-white/10 backdrop-blur-xl bg-black/40">
+                <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h2 className="text-3xl font-bold text-slate-900 dark:text-white">{t.paste_resume_title}</h2>
-                        <p className="text-slate-500 dark:text-slate-400 mt-1">{t.autofill_description}</p>
+                        <h2 className="text-3xl font-bold text-white mb-2">{t.paste_resume_title}</h2>
+                        <p className="text-slate-400">{t.autofill_description}</p>
                     </div>
-                    <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl text-orange-500">
+                    <div className="p-4 bg-orange-500/10 rounded-2xl text-orange-500 border border-orange-500/20">
                         <DocumentTextIcon className="w-8 h-8" />
                     </div>
                 </div>
                 
-                <form id="form-file-upload" className="relative mb-6" onDragEnter={handleDrag} onSubmit={(e) => e.preventDefault()}>
+                <form id="form-file-upload" className="relative mb-8" onDragEnter={handleDrag} onSubmit={(e) => e.preventDefault()}>
                     <input ref={inputRef} type="file" id="input-file-upload" className="hidden" onChange={handleFileChange} accept=".txt,.pdf,.docx" />
                     <label 
                         id="label-file-upload" 
                         htmlFor="input-file-upload" 
-                        className={`block h-48 rounded-xl border-2 border-dashed ${dragActive ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20' : 'border-slate-300 dark:border-slate-600 hover:border-orange-400 dark:hover:border-orange-500'} flex justify-center items-center text-center cursor-pointer transition-all duration-300`}
+                        className={`block h-56 rounded-2xl border-2 border-dashed ${dragActive ? 'border-orange-500 bg-orange-500/10' : 'border-white/10 hover:border-orange-500/50 hover:bg-white/5'} flex justify-center items-center text-center cursor-pointer transition-all duration-300 group`}
                     >
                         <div className="flex flex-col items-center justify-center p-4">
-                            <UploadIcon className={`w-12 h-12 mb-3 ${dragActive ? 'text-orange-500' : 'text-slate-400'}`} />
-                            <p className="text-lg font-medium text-slate-700 dark:text-slate-200">
+                            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-orange-500/20 transition-all border border-white/10">
+                                <UploadIcon className={`w-8 h-8 ${dragActive ? 'text-orange-500' : 'text-slate-400 group-hover:text-orange-500'}`} />
+                            </div>
+                            <p className="text-lg font-bold text-white">
                                 {t.upload_prompt_main}
                             </p>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t.upload_prompt_secondary}</p>
-                            <p className="text-xs text-slate-400 mt-2 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">{t.upload_file_types}</p>
-                            {fileName && <div className="mt-3 flex items-center gap-2 text-sm text-green-600 font-medium bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full"><CheckIcon className="w-4 h-4"/> {fileName}</div>}
+                            <p className="text-sm text-slate-500 mt-2">{t.upload_prompt_secondary}</p>
+
+                            {fileName && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="mt-4 flex items-center gap-2 text-sm text-green-400 font-bold bg-green-500/10 px-4 py-2 rounded-full border border-green-500/20"
+                                >
+                                    <CheckIcon className="w-4 h-4"/> {fileName}
+                                </motion.div>
+                            )}
                         </div>
                     </label>
-                    {dragActive && <div className="absolute inset-0 w-full h-full rounded-xl" onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}></div>}
+                    {dragActive && <div className="absolute inset-0 w-full h-full rounded-2xl" onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}></div>}
                 </form>
 
-                <div className="flex items-center mb-6">
-                    <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
-                    <span className="flex-shrink mx-4 text-slate-400 text-sm font-medium">{t.upload_or}</span>
-                    <div className="flex-grow border-t border-slate-200 dark:border-slate-700"></div>
+                <div className="flex items-center mb-8">
+                    <div className="flex-grow border-t border-white/10"></div>
+                    <span className="flex-shrink mx-4 text-slate-500 text-sm font-medium uppercase tracking-wider">{t.upload_or}</span>
+                    <div className="flex-grow border-t border-white/10"></div>
                 </div>
 
                 <textarea
@@ -443,18 +609,31 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                         if (fileName) setFileName('');
                     }}
                     placeholder={t.paste_resume_placeholder}
-                    className="w-full h-32 p-4 bg-slate-50 dark:bg-slate-700/50 text-slate-900 dark:text-slate-200 rounded-xl border border-slate-200 dark:border-slate-600 focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none transition-all"
+                    className="w-full h-40 p-6 bg-white/5 text-white rounded-2xl border border-white/10 focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none transition-all font-mono text-sm placeholder-slate-500"
                     disabled={isParsing}
                 />
-                {parseError && <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg text-sm flex items-center gap-2"><StopIcon className="w-4 h-4"/> {parseError}</div>}
                 
-                <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-100 dark:border-slate-700">
-                    <button onClick={() => setView('welcome')} className="px-6 py-2 text-slate-500 hover:text-slate-800 dark:hover:text-white transition font-medium" disabled={isParsing}>{t.back_button}</button>
-                    <button onClick={handleParseResume} className="px-8 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition font-bold flex items-center gap-2 shadow-lg hover:shadow-orange-500/30 disabled:opacity-70 disabled:cursor-wait" disabled={isParsing || (!resumeText.trim() && !resumeFile)}>
+                {parseError && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="mt-4 p-4 bg-red-500/10 text-red-400 rounded-xl text-sm flex items-center gap-3 border border-red-500/20"
+                    >
+                        <StopIcon className="w-5 h-5"/> {parseError}
+                    </motion.div>
+                )}
+
+                <div className="flex justify-between items-center mt-8 pt-6 border-t border-white/10">
+                    <button onClick={() => setView('welcome')} className="px-6 py-3 text-slate-400 hover:text-white transition font-medium" disabled={isParsing}>{t.back_button}</button>
+                    <button
+                        onClick={handleParseResume}
+                        className="px-8 py-4 bg-orange-600 text-white rounded-full hover:bg-orange-500 transition-all font-bold flex items-center gap-3 shadow-lg shadow-orange-500/30 disabled:opacity-70 disabled:cursor-wait"
+                        disabled={isParsing || (!resumeText.trim() && !resumeFile)}
+                    >
                         {isParsing ? (
                             <>
                                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                <span>{t.parsing_resume}</span>
+                                <span>Processing...</span>
                             </>
                         ) : (
                             <>
@@ -465,37 +644,27 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                     </button>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
     
     const renderVoiceOnboarding = () => (
-        <div className="w-full max-w-2xl mx-auto z-10 relative">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-200 dark:border-slate-700 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95 text-center">
-                <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <MicIcon className="w-8 h-8" />
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-2xl mx-auto z-10 relative"
+        >
+            <div className="glass-holographic rounded-3xl p-8 md:p-12 border border-white/10 backdrop-blur-xl bg-black/40 text-center">
+                <div className="w-20 h-20 bg-orange-500/10 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-8 ring-8 ring-orange-500/5 shadow-[0_0_30px_rgba(249,115,22,0.3)]">
+                    <MicIcon className="w-10 h-10" />
                 </div>
-                <h2 className="text-3xl font-bold mb-2 text-slate-900 dark:text-white">{t.voice_onboarding_title}</h2>
-                <p className="text-slate-500 dark:text-slate-400 mb-8 max-w-md mx-auto">{t.voice_onboarding_subtitle}</p>
+                <h2 className="text-4xl font-bold mb-4 text-white text-glow">{t.voice_onboarding_title}</h2>
+                <p className="text-slate-400 mb-10 max-w-lg mx-auto text-lg leading-relaxed">{t.voice_onboarding_subtitle}</p>
                 
-                <div className={`bg-slate-50 dark:bg-slate-700/30 p-6 rounded-xl border border-slate-200 dark:border-slate-700 ${language === 'ar' ? 'text-right' : 'text-left'} mb-8 text-sm text-slate-600 dark:text-slate-300`}>
-                    <p className="font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2">
-                        <SparklesIcon className="w-4 h-4 text-orange-500"/> {t.voice_onboarding_guidance_title}
-                    </p>
-                    <ul className="space-y-2">
-                        {[t.voice_onboarding_guidance_item1, t.voice_onboarding_guidance_item2, t.voice_onboarding_guidance_item3, t.voice_onboarding_guidance_item4, t.voice_onboarding_guidance_item5].map((item, i) => (
-                            <li key={i} className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-orange-400"></div>
-                                {item}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-
-                <div className="relative mb-8">
-                    <canvas ref={visualizerRef} width="600" height="120" className="w-full h-32 rounded-xl bg-slate-50 dark:bg-slate-900"></canvas>
+                <div className="relative mb-12 flex justify-center items-center h-48">
+                    <canvas ref={visualizerRef} width="300" height="300" className="w-[300px] h-[300px] rounded-full bg-black/50 border border-white/5"></canvas>
                     {!isRecording && !isParsing && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/10 dark:bg-slate-900/40 rounded-xl pointer-events-none">
-                            <p className="text-slate-600 dark:text-white/70 text-sm font-mono">Click microphone to start</p>
+                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <p className="text-orange-400 font-mono text-xs tracking-[0.3em] uppercase bg-black/60 px-4 py-2 rounded-full backdrop-blur-md border border-orange-500/30 animate-pulse">Tap to Activate</p>
                         </div>
                     )}
                 </div>
@@ -503,136 +672,158 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 <button 
                     onClick={isRecording ? stopRecording : startRecording} 
                     disabled={isParsing}
-                    className={`w-20 h-20 rounded-full text-white transition-all duration-300 flex items-center justify-center mx-auto shadow-xl hover:scale-110 active:scale-95 ${isRecording ? 'bg-red-500 hover:bg-red-600 shadow-red-500/30 animate-pulse' : 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/30'} disabled:bg-slate-400 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-none`}
+                    className={`w-24 h-24 rounded-full text-white transition-all duration-300 flex items-center justify-center mx-auto shadow-2xl hover:scale-105 active:scale-95 ${isRecording ? 'bg-red-500 hover:bg-red-600 shadow-red-500/50 animate-pulse' : 'bg-gradient-to-br from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 shadow-orange-500/40'} disabled:bg-slate-700 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-none border border-white/20`}
                 >
-                    {isRecording ? <StopIcon className="w-8 h-8"/> : <MicIcon className="w-8 h-8"/>}
+                    {isRecording ? <StopIcon className="w-10 h-10"/> : <MicIcon className="w-10 h-10"/>}
                 </button>
 
                  {isParsing && (
-                    <div className="mt-6 flex items-center justify-center gap-3 text-slate-600 dark:text-slate-300 animate-pulse">
+                    <div className="mt-8 flex items-center justify-center gap-3 text-slate-300">
                         <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-                        <span className="font-medium">{t.analyzing_profile}</span>
+                        <span className="font-medium animate-pulse">{t.analyzing_profile}</span>
                     </div>
                 )}
 
-                {parseError && <p className="text-red-500 mt-6 text-sm font-medium bg-red-50 dark:bg-red-900/20 p-3 rounded-lg inline-block">{parseError}</p>}
+                {parseError && (
+                    <motion.p
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="text-red-400 mt-8 text-sm font-bold bg-red-500/10 px-6 py-3 rounded-full inline-block border border-red-500/20"
+                    >
+                        {parseError}
+                    </motion.p>
+                )}
                 
-                <div className="flex justify-center mt-8">
-                     <button onClick={() => setView('welcome')} className="px-6 py-2 text-slate-400 hover:text-slate-800 dark:hover:text-white transition font-medium" disabled={isParsing || isRecording}>{t.back_button}</button>
+                <div className="flex justify-center mt-12">
+                     <button onClick={() => setView('welcome')} className="px-8 py-3 text-slate-400 hover:text-white transition font-medium rounded-full hover:bg-white/5" disabled={isParsing || isRecording}>{t.back_button}</button>
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 
-    const OptionCard = ({ icon: Icon, title, description, onClick, recommended = false, delay = 0 }: any) => (
-        <button 
+    const OptionCard = ({ icon: Icon, title, description, onClick, recommended = false, delay = 0, isHero = false }: any) => (
+        <motion.button
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: delay / 1000 }}
+            whileHover={{ y: -8, scale: 1.02 }}
             onClick={onClick}
-            className={`group relative flex flex-col items-start text-left p-8 rounded-3xl transition-all duration-300 border hover:shadow-2xl hover:-translate-y-2 overflow-hidden
+            className={`group relative flex flex-col items-start text-left p-8 rounded-[2rem] transition-all duration-300 border overflow-hidden w-full
             ${recommended 
-                ? 'bg-white dark:bg-slate-800 border-orange-500/50 dark:border-orange-500/50 ring-4 ring-orange-500/10' 
-                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-orange-300 dark:hover:border-orange-700'
-            }`}
-            style={{ animationDelay: `${delay}ms` }}
+                ? 'bg-gradient-to-b from-orange-500/20 to-black/40 border-orange-500/50 shadow-[0_0_30px_rgba(249,115,22,0.15)]'
+                : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-orange-500/30'
+            } backdrop-blur-xl ${isHero ? 'col-span-1 md:col-span-2' : ''}`}
         >
-            {/* Decorative glow in background */}
-            <div className={`absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full blur-2xl -mr-10 -mt-10 transition-all group-hover:bg-orange-500/10`}></div>
-            
             {recommended && (
-                <div className="absolute top-4 right-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm tracking-wider">
+                <div className="absolute top-6 right-6 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg tracking-wider animate-pulse">
                     RECOMMENDED
                 </div>
             )}
             
-            <div className={`p-4 rounded-2xl mb-6 transition-all duration-300 transform group-hover:scale-110 group-hover:rotate-3 ${recommended ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 group-hover:bg-orange-50 dark:group-hover:bg-orange-900/20 group-hover:text-orange-600'}`}>
-                <Icon className="w-10 h-10" />
+            <div className={`p-5 rounded-2xl mb-8 transition-all duration-300 transform group-hover:scale-110 group-hover:rotate-6 ${recommended ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/30' : 'bg-white/10 text-white group-hover:bg-orange-500/20 group-hover:text-orange-500'}`}>
+                <Icon className="w-8 h-8" />
             </div>
             
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-orange-600 transition-colors">{title}</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">{description}</p>
+            <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-orange-500 transition-colors">{title}</h3>
+            <p className="text-sm text-slate-400 leading-relaxed mb-8">{description}</p>
             
-            <div className="mt-auto flex items-center text-orange-500 font-bold text-sm transition-all transform group-hover:translate-x-1">
-                <span className="mr-2">Select Option</span>
+            <div className={`mt-auto flex items-center font-bold text-sm transition-all transform group-hover:translate-x-2 ${recommended ? 'text-orange-400' : 'text-slate-500 group-hover:text-orange-400'}`}>
+                <span className="mr-2">Initiate Sequence</span>
                 <ArrowRightIcon className="w-4 h-4" />
             </div>
-        </button>
+        </motion.button>
     );
 
     const renderWelcome = () => {
-        const features = [
-            t.feature_smart_matching || "Smart AI Matching",
-            t.feature_action_plans || "Weekly Action Plans",
-            t.feature_global_access || "Global Scholarships"
-        ];
-
         return (
-            <div className="w-full max-w-6xl mx-auto z-10 relative">
-                <div className="text-center max-w-3xl mx-auto mb-16 animate-fade-in-up">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 text-xs font-bold uppercase tracking-wider mb-6 border border-orange-200 dark:border-orange-800/30">
-                        <SparklesIcon className="w-3 h-3" /> AI-Powered Platform
-                    </div>
-                    <h1 className="text-5xl md:text-7xl font-extrabold text-slate-900 dark:text-white mb-6 tracking-tight leading-tight">
-                        {t.welcome_title.split('ScholarAI')[0]}
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-amber-500">ScholarAI</span>
-                    </h1>
-                    <p className="text-xl text-slate-600 dark:text-slate-300 mb-8 max-w-2xl mx-auto leading-relaxed">{t.welcome_subtitle}</p>
+            <div className="w-full max-w-7xl mx-auto z-10 relative">
+                <div className="text-center max-w-3xl mx-auto mb-20">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-500/10 text-orange-400 text-xs font-bold uppercase tracking-wider mb-8 border border-orange-500/20 backdrop-blur-sm shadow-[0_0_15px_rgba(249,115,22,0.2)]"
+                    >
+                        <SparklesIcon className="w-3 h-3" /> System Ready
+                    </motion.div>
                     
-                    <div className="flex flex-wrap justify-center gap-4 md:gap-8 text-sm font-medium text-slate-500 dark:text-slate-400">
-                        {features.map((feature, i) => (
-                            <div key={i} className="flex items-center gap-2">
-                                <div className="p-1 bg-green-100 dark:bg-green-900/30 rounded-full text-green-600">
-                                    <CheckIcon className="w-3 h-3" />
-                                </div>
-                                {feature}
-                            </div>
-                        ))}
-                    </div>
+                    <motion.h1
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="text-6xl md:text-8xl font-black text-white mb-8 tracking-tighter"
+                    >
+                        Initialize <br/>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 text-glow">Protocol</span>
+                    </motion.h1>
+
+                    <motion.p
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="text-xl text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed"
+                    >
+                        Select your preferred method of data entry. Our AI systems are standing by to process your profile.
+                    </motion.p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 px-4">
-                    <OptionCard 
-                        icon={MicIcon}
-                        title={t.voice_onboarding_title}
-                        description={t.voice_onboarding_description}
-                        onClick={() => setView('voice_onboarding')}
-                        recommended={true}
-                        delay={100}
-                    />
-                    <OptionCard 
-                        icon={DocumentTextIcon}
-                        title={t.autofill_resume}
-                        description={t.autofill_description}
-                        onClick={() => setView('parse_resume')}
-                        delay={200}
-                    />
-                    <OptionCard 
-                        icon={EditIcon}
-                        title={t.fill_manually}
-                        description={t.fill_manually_description}
-                        onClick={() => { setView('form'); setStep(1); }}
-                        delay={300}
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 px-4">
+                    {/* Voice Onboarding - The "Hero" Card */}
+                    <div className="col-span-1 md:col-span-2 lg:col-span-2">
+                        <OptionCard
+                            icon={MicIcon}
+                            title={t.voice_onboarding_title}
+                            description={t.voice_onboarding_description}
+                            onClick={() => setView('voice_onboarding')}
+                            recommended={true}
+                            delay={100}
+                            isHero={true}
+                        />
+                    </div>
+                    <div className="col-span-1 lg:col-span-1">
+                        <OptionCard
+                            icon={DocumentTextIcon}
+                            title={t.autofill_resume}
+                            description={t.autofill_description}
+                            onClick={() => setView('parse_resume')}
+                            delay={200}
+                        />
+                    </div>
+                    <div className="col-span-1 lg:col-span-1">
+                        <OptionCard
+                            icon={EditIcon}
+                            title={t.fill_manually}
+                            description={t.fill_manually_description}
+                            onClick={() => { setView('form'); setStep(1); }}
+                            delay={300}
+                        />
+                    </div>
                 </div>
             </div>
         );
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden bg-slate-50 dark:bg-slate-900 selection:bg-orange-500 selection:text-white">
-             {/* Background decorations */}
-             <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-orange-400/20 rounded-full blur-3xl pointer-events-none mix-blend-multiply dark:mix-blend-soft-light animate-blob" />
-             <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-amber-400/20 rounded-full blur-3xl pointer-events-none mix-blend-multiply dark:mix-blend-soft-light animate-blob animation-delay-2000" />
-             <div className="absolute top-[40%] left-[40%] w-96 h-96 bg-pink-400/20 rounded-full blur-3xl pointer-events-none mix-blend-multiply dark:mix-blend-soft-light animate-blob animation-delay-4000" />
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden bg-[#0a0a0a] selection:bg-orange-500 selection:text-white">
+             {/* Confetti Celebration */}
+             <Confetti isActive={showCelebration} />
 
-             <div className="absolute top-6 right-6 flex items-center gap-2 z-20">
+             {/* Dynamic Background */}
+             <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+                 <div className="absolute top-[-10%] left-[-10%] w-[800px] h-[800px] bg-orange-600/10 rounded-full blur-[120px] animate-blob" />
+                 <div className="absolute bottom-[-10%] right-[-10%] w-[800px] h-[800px] bg-blue-600/10 rounded-full blur-[120px] animate-blob animation-delay-2000" />
+                 <div className="absolute top-[40%] left-[40%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[120px] animate-blob animation-delay-4000" />
+                 <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay"></div>
+             </div>
+
+             <div className="absolute top-6 right-6 flex items-center gap-4 z-20">
                 <ThemeSwitcher isDashboard={false} />
                 <LanguageSwitcher isDashboard={false} />
             </div>
             
-            <header className="flex items-center gap-3 justify-center mb-12 z-10">
-                <Logo className="w-12 h-12" />
-                <h1 className="text-2xl font-bold tracking-tight">
-                    <span className="text-slate-900 dark:text-white">Scholar</span>
-                    <span className="text-orange-500">AI</span>
+            <header className="flex items-center gap-3 justify-center mb-12 z-10 cursor-pointer" onClick={() => setView('welcome')}>
+                <Logo className="w-10 h-10 text-orange-500" />
+                <h1 className="text-xl font-bold tracking-tight text-white">
+                    Scholar<span className="text-orange-500">AI</span>
                 </h1>
             </header>
             

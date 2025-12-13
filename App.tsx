@@ -1,6 +1,8 @@
 import React from 'react';
+import { useState } from 'react';
 import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
+import LandingPage from './components/LandingPage';
 import { AppProvider, useAppContext } from './contexts/AppContext';
 import { Logo } from './components/Logo';
 
@@ -8,18 +10,24 @@ import { Logo } from './components/Logo';
 // centralized state from AppContext to decide what to render.
 const AppContent = () => {
   const { view, onboardingComplete, userProfile } = useAppContext();
+  const [showLanding, setShowLanding] = useState(true);
 
   // The 'loading' state occurs for a brief moment while the context
   // checks localStorage for an existing profile.
   if (view === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Logo className="w-24 h-24 animate-pulse" />
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+        <Logo className="w-24 h-24 animate-pulse text-orange-500" />
       </div>
     );
   }
 
-  if (view === 'onboarding') {
+  // Show Landing Page first if no user profile and not already navigating
+  if (showLanding && !userProfile) {
+    return <LandingPage onGetStarted={() => setShowLanding(false)} />;
+  }
+
+  if (view === 'onboarding' || (!userProfile && !showLanding)) {
     return <Onboarding onComplete={onboardingComplete} />;
   }
 
