@@ -1,11 +1,12 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { useAppContext } from '../../contexts/AppContext';
 import { Scholarship } from '../../types';
-import { CalendarIcon, ThumbsUpIcon, ThumbsDownIcon, CalendarPlusIcon, SparklesIcon } from '../icons';
+import { CalendarIcon, ThumbsUpIcon, ThumbsDownIcon, CalendarPlusIcon, SparklesIcon, ShareIcon } from '../icons';
 import { translations } from '../../translations';
 import LoadingView from '../LoadingView';
+import Confetti from '../Confetti';
 
 // New component for visualizing the match score
 const MatchScoreRing = ({ score, size = 40 }: { score: string, size?: number }) => {
@@ -49,9 +50,10 @@ interface ScholarshipCardProps {
     language: 'ar' | 'en';
     theme: 'light' | 'dark';
     updateScholarshipFeedback: (scholarshipId: string, feedback: 'good' | 'bad') => void;
+    onShare?: (scholarship: Scholarship) => void;
 }
 
-const ScholarshipCard: React.FC<ScholarshipCardProps> = React.memo(({ scholarship, isPdfView = false, language, theme, updateScholarshipFeedback }) => {
+const ScholarshipCard: React.FC<ScholarshipCardProps> = React.memo(({ scholarship, isPdfView = false, language, theme, updateScholarshipFeedback, onShare }) => {
     const t = translations[language];
     
     const effortColors = {
@@ -118,6 +120,11 @@ const ScholarshipCard: React.FC<ScholarshipCardProps> = React.memo(({ scholarshi
                                 <button onClick={() => handleAddToCalendar(`Apply for ${scholarship.name}`, scholarship.deadline)} className="text-slate-400 hover:text-orange-500" aria-label={t.add_to_calendar}><CalendarPlusIcon className="w-5 h-5"/></button>
                                 <button onClick={() => updateScholarshipFeedback(scholarship.id, 'good')} className={feedbackColor(scholarship.feedback, 'good')} aria-label={t.save_to_plan}><ThumbsUpIcon className="w-5 h-5"/></button>
                                 <button onClick={() => updateScholarshipFeedback(scholarship.id, 'bad')} className={feedbackColor(scholarship.feedback, 'bad')} aria-label={t.not_a_fit}><ThumbsDownIcon className="w-5 h-5"/></button>
+                                {onShare && (
+                                    <button onClick={() => onShare(scholarship)} className="text-slate-400 hover:text-blue-500" aria-label="Share">
+                                        <ShareIcon className="w-5 h-5"/>
+                                    </button>
+                                )}
                             </>
                          )}
                     </div>
@@ -137,7 +144,78 @@ const ScholarshipCard: React.FC<ScholarshipCardProps> = React.memo(({ scholarshi
 
 const OpportunitiesView: React.FC = () => {
     const { scholarships, loading, language, userProfile, theme, updateScholarshipFeedback } = useAppContext();
+    const [showConfetti, setShowConfetti] = useState(false);
     const t = translations[language];
+
+    const handleShare = (scholarship: Scholarship) => {
+        // Trigger confetti if it's a good match
+        if (scholarship.matchScore === 'Perfect Match' || scholarship.matchScore === 'Excellent Match') {
+            setShowConfetti(true);
+            setTimeout(() => setShowConfetti(false), 3000);
+        }
+
+        const input = document.createElement('div');
+        input.style.position = 'absolute';
+        input.style.left = '-9999px';
+        input.style.width = '1080px'; // Instagram Story width
+        input.style.height = '1920px'; // Instagram Story height
+        document.body.appendChild(input);
+
+        const ShareContent = () => (
+            <div className={`w-full h-full flex flex-col items-center justify-center p-12 bg-gradient-to-br from-slate-900 to-black text-white relative overflow-hidden`} style={{ fontFamily: "'Cairo', 'Inter', sans-serif"}}>
+                 {/* Background Blobs */}
+                 <div className="absolute top-[-10%] left-[-10%] w-[800px] h-[800px] bg-orange-600/30 rounded-full blur-[150px]" />
+                 <div className="absolute bottom-[-10%] right-[-10%] w-[800px] h-[800px] bg-blue-600/30 rounded-full blur-[150px]" />
+
+                 <div className="relative z-10 text-center scale-150 transform">
+                    <div className="mb-12 inline-block p-6 bg-white/10 backdrop-blur-xl rounded-full border border-white/20 shadow-2xl">
+                         <MatchScoreRing score={scholarship.matchScore} size={180} />
+                    </div>
+
+                    <h2 className="text-4xl font-bold text-orange-400 mb-6 uppercase tracking-widest">It's a Match!</h2>
+
+                    <h1 className="text-6xl font-black mb-8 leading-tight max-w-3xl mx-auto">
+                        {scholarship.name}
+                    </h1>
+
+                    <p className="text-3xl text-slate-300 mb-12 max-w-2xl mx-auto">
+                        {scholarship.organization}
+                    </p>
+
+                    <div className="bg-white/10 backdrop-blur-md p-8 rounded-3xl border border-white/10 max-w-2xl mx-auto mb-12">
+                        <p className="text-2xl text-slate-200 italic">"{scholarship.matchReason}"</p>
+                    </div>
+                 </div>
+
+                 <div className="absolute bottom-20 left-0 right-0 text-center">
+                    <div className="inline-flex items-center gap-3 bg-white text-black px-8 py-4 rounded-full font-bold text-2xl shadow-xl">
+                        <span className="text-orange-600">ScholarAI</span>
+                        <span>Found this for me</span>
+                    </div>
+                 </div>
+            </div>
+        );
+
+        const root = createRoot(input);
+        flushSync(() => {
+            root.render(<ShareContent />);
+        });
+
+        html2canvas(input, {
+            scale: 1,
+            useCORS: true,
+            backgroundColor: '#000',
+        }).then((canvas) => {
+            const imgData = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = `scholarai-match-${scholarship.id}.png`;
+            link.href = imgData;
+            link.click();
+        }).finally(() => {
+            root.unmount();
+            document.body.removeChild(input);
+        });
+    };
 
     const handleExportPdf = () => {
         const input = document.createElement('div');
@@ -218,6 +296,7 @@ const OpportunitiesView: React.FC = () => {
 
     return (
         <div className="space-y-8">
+            <Confetti isActive={showConfetti} />
             <div>
                  <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
                     <div>
@@ -234,7 +313,16 @@ const OpportunitiesView: React.FC = () => {
 
                 {goodMatches.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {goodMatches.map(s => <ScholarshipCard key={s.id} scholarship={s} language={language} theme={theme} updateScholarshipFeedback={updateScholarshipFeedback} />)}
+                        {goodMatches.map(s => (
+                            <ScholarshipCard
+                                key={s.id}
+                                scholarship={s}
+                                language={language}
+                                theme={theme}
+                                updateScholarshipFeedback={updateScholarshipFeedback}
+                                onShare={handleShare}
+                            />
+                        ))}
                     </div>
                 ) : (
                     <div className="text-center py-12 bg-slate-100 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
