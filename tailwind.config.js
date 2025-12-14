@@ -11,7 +11,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        'deep-space': '#050505', // Added matching color
+        'deep-space': '#050505',
         background: '#0a0a0a',
         surface: '#121212',
         primary: {
@@ -35,10 +35,14 @@ export default {
         'fade-in': 'fadeIn 0.5s ease-out',
         'fade-in-up': 'fadeInUp 0.8s ease-out',
         'float': 'float 6s ease-in-out infinite',
+        'float-fast': 'float 3s ease-in-out infinite',
         'pulse-glow': 'pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'blob': 'blob 7s infinite',
-        'gradient-x': 'gradient-x 15s ease infinite', // Added
+        'gradient-x': 'gradient-x 15s ease infinite',
         'spin-slow': 'spin 12s linear infinite',
+        'twinkle': 'twinkle 4s ease-in-out infinite',
+        'border-beam': 'border-beam 2s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -73,10 +77,18 @@ export default {
             'background-position': 'right center'
           },
         },
+        twinkle: {
+          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+          '50%': { opacity: '0.3', transform: 'scale(0.8)' },
+        },
+        'border-beam': {
+          '100%': { 'offset-distance': '100%' },
+        },
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'hero-glow': 'conic-gradient(from 180deg at 50% 50%, #2a8af6 0deg, #a853ba 180deg, #e92a67 360deg)',
+        'grid-white': 'linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px)',
       }
     },
   },
