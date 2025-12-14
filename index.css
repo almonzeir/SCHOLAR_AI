@@ -8,8 +8,8 @@
   font-weight: 400;
 
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #050505; /* Deep Space Black */
+  color: rgba(255, 255, 255, 0.9);
+  background-color: #030014; /* Deepest Cyber Void */
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -22,103 +22,177 @@ body {
   min-width: 320px;
   min-height: 100vh;
   overflow-x: hidden;
+  @apply bg-deep-space;
 }
 
-/* Custom Selection Color */
+/* --- THEME CONFIGURATION --- */
+
+/* Custom Selection */
 ::selection {
-  background-color: rgba(249, 115, 22, 0.3); /* Orange tint */
+  background-color: rgba(249, 115, 22, 0.5);
   color: white;
 }
 
-/* Glassmorphism Utilities */
+/* Custom Scrollbar - Cyberpunk Style */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #030014;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #334155 0%, #475569 100%);
+  border-radius: 4px;
+  border: 2px solid #030014;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #f97316 0%, #ec4899 100%);
+}
+
+/* --- ANIMATION KEYFRAMES --- */
+
+@keyframes aurora {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
+}
+
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes glitch {
+  0% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+  100% { transform: translate(0); }
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes ticker {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* --- UTILITY CLASSES --- */
+
+/* Backgrounds */
+.bg-deep-space {
+  background-color: #030014;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(88, 28, 135, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 100% 0%, rgba(236, 72, 153, 0.1) 0%, transparent 30%);
+}
+
+.bg-grid {
+  background-size: 50px 50px;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  mask-image: radial-gradient(ellipse at center, black 40%, transparent 75%);
+}
+
+/* Glassmorphism V2 (Prismatic) */
 .glass {
-  @apply backdrop-blur-md bg-white/5 border border-white/10 shadow-xl;
+  @apply backdrop-blur-xl bg-white/5 border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.36)];
 }
 
-.glass-dark {
-  @apply backdrop-blur-md bg-black/40 border border-white/10 shadow-xl;
+.glass-prism {
+  @apply backdrop-blur-2xl bg-white/[0.03] border border-white/[0.05] shadow-2xl relative overflow-hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.glass-card {
-  @apply rounded-2xl border border-white/10 bg-white/5 backdrop-blur-lg shadow-lg transition-all duration-300 hover:bg-white/10 hover:shadow-orange-500/20 hover:border-orange-500/30;
-}
-
-.glass-panel {
-    @apply bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl;
-}
-
-/* Holographic & Neon Effects */
-.glass-holographic {
-  @apply backdrop-blur-xl bg-gradient-to-br from-white/10 to-white/5 border border-white/20 shadow-xl relative overflow-hidden;
-}
-
-.glass-holographic::before {
+.glass-prism::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: -50%;
-  width: 200%;
-  height: 100%;
+  inset: 0;
+  background: linear-gradient(125deg, transparent 0%, rgba(255,255,255,0.05) 40%, transparent 100%);
+  transform: translateX(-100%);
+  transition: transform 0.6s;
+}
+
+.glass-prism:hover::before {
+  transform: translateX(100%);
+}
+
+.glass-prism:hover {
+  @apply border-white/20 shadow-[0_0_30px_rgba(249,115,22,0.15)] bg-white/[0.07];
+  transform: translateY(-5px) scale(1.01);
+}
+
+/* Text Effects */
+.text-shimmer {
   background: linear-gradient(
-    60deg,
-    transparent,
-    rgba(255, 255, 255, 0.1),
-    transparent
+    90deg,
+    rgba(255,255,255,0.8) 0%,
+    rgba(255,255,255,1) 45%,
+    rgba(249,115,22,1) 50%,
+    rgba(255,255,255,1) 55%,
+    rgba(255,255,255,0.8) 100%
   );
-  transform: rotate(25deg);
-  pointer-events: none;
-  opacity: 0.5;
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shimmer 4s linear infinite;
+}
+
+.text-glow-strong {
+  text-shadow: 0 0 40px rgba(249, 115, 22, 0.6), 0 0 80px rgba(249, 115, 22, 0.3);
+}
+
+.text-gradient-cyber {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600;
+}
+
+.text-gradient-fire {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-orange-400 via-amber-500 to-red-500;
 }
 
 .text-glow {
-  text-shadow: 0 0 20px rgba(249, 115, 22, 0.5);
+  text-shadow: 0 0 30px rgba(249, 115, 22, 0.4);
 }
 
-.orb-pulse {
-  animation: pulse-glow 3s infinite ease-in-out;
+/* Component Utilities */
+.btn-primary-glow {
+  @apply relative overflow-hidden bg-gradient-to-r from-orange-600 to-red-600 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 hover:shadow-[0_0_40px_rgba(234,88,12,0.5)] hover:scale-105 active:scale-95;
 }
 
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(249, 115, 22, 0.2);
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(249, 115, 22, 0.4);
-    transform: scale(1.02);
-  }
+.btn-primary-glow::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(rgba(255,255,255,0.2), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.btn-primary-glow:hover::after { opacity: 1; }
+
+.live-badge {
+  @apply flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold uppercase tracking-wider;
 }
 
-/* Custom Scrollbar - Neon Style */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.live-dot {
+  @apply w-2 h-2 rounded-full bg-red-500 animate-pulse box-border shadow-[0_0_10px_rgba(239,68,68,0.8)];
 }
 
-::-webkit-scrollbar-track {
-  background: #050505;
-}
+/* --- LEGACY SUPPORT (DO NOT REMOVE) --- */
 
-::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 10px;
-  transition: background 0.3s ease;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #f97316; /* Orange hover */
-}
-
-/* Text Gradients */
-.text-gradient {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500;
-}
-
-.text-gradient-blue {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500;
-}
-
-/* Legacy Utility Classes (Preserved for backward compatibility) */
 .btn-secondary {
   @apply px-4 py-2 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition-colors dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700;
 }
@@ -155,24 +229,17 @@ body {
   @apply py-12 md:py-20;
 }
 
-/* Animations */
-.animate-delay-100 {
-  animation-delay: 100ms;
-}
-.animate-delay-200 {
-  animation-delay: 200ms;
-}
-.animate-delay-300 {
-  animation-delay: 300ms;
-}
-.animate-delay-2000 {
-  animation-delay: 2000ms;
-}
-.animate-delay-4000 {
-  animation-delay: 4000ms;
+/* Helper Animations */
+.animate-delay-100 { animation-delay: 100ms; }
+.animate-delay-200 { animation-delay: 200ms; }
+.animate-delay-300 { animation-delay: 300ms; }
+.animate-delay-500 { animation-delay: 500ms; }
+.animate-delay-1000 { animation-delay: 1000ms; }
+
+.animate-blob {
+  animation: blob 7s infinite;
 }
 
-/* Blob Animation for Background (Fallback/Helper) */
 @keyframes blob {
   0% { transform: translate(0px, 0px) scale(1); }
   33% { transform: translate(30px, -50px) scale(1.1); }
@@ -180,15 +247,22 @@ body {
   100% { transform: translate(0px, 0px) scale(1); }
 }
 
-.animate-blob {
-  animation: blob 7s infinite;
+.perspective-1000 {
+  perspective: 1000px;
 }
 
-/* Hide scrollbar for clean UI but keep functionality */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+.preserve-3d {
+  transform-style: preserve-3d;
 }
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-x-12 {
+  transform: rotateX(12deg);
+}
+
+.rotate-y-12 {
+  transform: rotateY(12deg);
 }
